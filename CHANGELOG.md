@@ -3,6 +3,7 @@
 
 #### Added
 - code to override functions
+- mod config options
 
 #### Todo
 - mod config files
