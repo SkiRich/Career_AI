@@ -11,7 +11,7 @@ local lf_print = true -- Setup debug printing in local file
 local IT = _InternalTranslate
 
 -- gather all the open jobs that want specialists
-function CAIgatherOpenJobs()
+local function CAIgatherOpenJobs()
 	local openjobs = {counts = {}, employers = {}}
 	local jobsbyspec = {}
 	local workplaces = UICity.labels.Workplace or empty_table
@@ -50,7 +50,7 @@ end -- CAIgatherOpenJobs()
 
 
 -- gather colonists with specialities working non-specialty jobs
-function CAIgatherColonists()
+local function CAIgatherColonists()
 	local colonists = UICity.labels.Colonist or empty_table
 	local jobhunters = {}
 
@@ -109,6 +109,7 @@ function CAIjobhunt(jobtype)
 	local openjobs = CAIgatherOpenJobs()
 	local jobhunters = CAIgatherColonists()
 	local totalopenjobs = 0
+	local speclist = jobtype and {jobtype} or ColonistSpecializationList or empty_table
 
 	-- short circuit if no open jobs
 	for _, count in pairs(openjobs.counts) do
@@ -121,11 +122,14 @@ function CAIjobhunt(jobtype)
 		if lf_print then print("Total Open Jobs: ", totalopenjobs) end
 	end -- if totalopenjobs
 
-	if jobtype then
-		local applicants = jobhunters[jobtype]
-		local employers = openjobs.employers[jobtype]
+	for spec = 1, #speclist do
+		local applicants = jobhunters[speclist[spec]]
+		local employers = openjobs.employers[speclist[spec]]
 		if applicants and #applicants > 0 and employers and #employers > 0 then
-			if lf_print then print("We have applicants and jobs to switch - Applicants: ", #applicants, " Employers: ", #employers) end
+			if lf_print then
+				print("--------------------------------------------")
+				print("We have applicants and jobs to switch for job type: ", speclist[spec], " - #Applicants: ", #applicants, " #Employers: ", #employers)
+			end -- if lf_print
 			for i = 1, #employers do
 				local numopenslots = CAIgetFreeSlots(employers[i])
 				for shift = 1, 3 do
@@ -142,9 +146,9 @@ function CAIjobhunt(jobtype)
 						  		print(string.format("Applicant %s is moving from %s to %s", IT(applicants[1].name), IT(aworkplace), IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name)))
 						  	end -- if lf_print
 						  	if applicants[1]:CanReachBuilding(employers[i]) then -- if they can walk or get a ride then move
-						  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
-						  	  local a_dome = applicants[1].dome
+						  	  local a_dome = applicants[1].dome or applicants[1].current_dome -- current_dome is just in case the colonist is currently moving domes.
 						  	  local e_dome = employers[i].parent_dome
+						  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  if a_dome == e_dome or IsInWalkingDist(a_dome, e_dome) then
 						  	  	-- if applicant can get to the job, then set it right away
 						  	  	applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
@@ -169,11 +173,9 @@ function CAIjobhunt(jobtype)
 				end -- for shift
 			end -- for i
     else
-    	if lf_print then print("No match for applicants and employers in:", jobtype) end
+    	if lf_print then print("No match for applicants and employers in:", speclist[spec]) end
 		end -- applicant and employers
-	else
-		print("No Code Here Yet")
-	end
+	end -- for
 
 
 
@@ -183,7 +185,8 @@ end -- CAIjobhunt()
 ---------------------------------------------- OnMsgs -----------------------------------------------
 
 
-function OnMsg.LoadGame()
-
-
+function OnMsg.NewHour(hour)
+  if hour == 8 then
+  	CAIjobhunt()
+  end -- once a day at 8AM
 end -- OnMsg.LoadGame()
