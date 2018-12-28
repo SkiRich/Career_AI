@@ -5,12 +5,17 @@
 -- Created Dec 24th, 2018
 
 
-local lf_print      = true -- Setup debug printing in local file
-local lf_printDebug = true -- debug ChooseWorkplace
-                           -- Use if lf_print then print("something") end
+local lf_print      = false -- Setup debug printing in local file
+local lf_printDebug = false -- debug ChooseWorkplace
+                            -- Use if lf_print then print("something") end
+                            -- use Msg("ToggleLFPrint", "CIA", "printdebug") to toggle
+
+local ModDir = CurrentModPath
+local iconCIAnotice = ModDir.."UI/Icons/CareerAINotice.png"
 
 GlobalVar("g_CAIenabled", true) -- var to turn on or off CAI
 g_CAIoverride = false -- var to override CAI if incompatible mods detected
+g_CIAnoticeDismissTime = 15000
 
 local IT = _InternalTranslate
 
@@ -133,10 +138,10 @@ function CAIjobhunt(jobtype)
 						  		print(string.format("Applicant %s is moving from %s to %s", IT(applicants[1].name), IT(aworkplace), IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name)))
 						  	end -- if lf_print
 						  	if applicants[1]:CanReachBuilding(employers[i]) then -- if they can walk or get a ride then move
-						  	  local a_dome = applicants[1].dome or applicants[1].current_dome -- current_dome is just in case the colonist is currently moving domes.
+						  	  local a_dome = applicants[1].dome or applicants[1].current_dome or applicants[1]:GetPos() -- current_dome is just in case the colonist is currently moving domes.
 						  	  local e_dome = employers[i].parent_dome
 						  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
-						  	  if a_dome == e_dome or IsInWalkingDist(a_dome, e_dome) then
+						  	  if a_dome == e_dome or IsInWalkingDistDome(a_dome, e_dome) then
 						  	  	-- if applicant can get to the job, then set it right away
 						  	  	applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	    if a_dome ~= e_dome and e_dome:GetFreeLivingSpace() > 0 then applicants[1]:SetForcedDome(e_dome) end -- relocate colonist if there is space
@@ -207,14 +212,19 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   		  print("Best Spec Match: ", best_specialist_match)
   		  print("--------------------------------------")
   	  end -- if lf_printDebug
+
+  	  -- return vars
   	  return best_bld, best_shift, best_to_kick, best_specialist_match
     end -- if best_bld
   end -- if there are specialist workplaces for the colonist
 
   -- use old function as default
   if lf_printDebug then print("-+= Default ChooseWorkplace in Effect =+-") end
-  return Old_ChooseWorkplace(unit, workplaces, false) -- set false here to prevent non-specs from kicking out specs even if they would be better choices
+  return Old_ChooseWorkplace(unit, workplaces, allow_exchange)
 end -- ChooseWorkplace(unit, workplaces, allow_exchange)
+
+
+
 ---------------------------------------------- OnMsgs -----------------------------------------------
 
 
@@ -223,3 +233,14 @@ function OnMsg.NewHour(hour)
   	CAIjobhunt()
   end -- once a day at 8AM
 end -- OnMsg.LoadGame()
+
+function OnMsg.ToggleLFPrint(modname, lfvar)
+	-- use Msg("ToggleLFPrint", "CIA", "printdebug") to toggle
+	if modname == "CIA" then
+		if lfvar then
+			if lfvar == "printdebug" then lf_printDebug = not lf_printDebug end
+		else
+			lf_print = not lf_print
+		end -- if lfvar
+  end -- if
+end -- OnMsg.ToggleLFPrint(modname)

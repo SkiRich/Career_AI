@@ -1,9 +1,13 @@
 # Changelog for Career A.I.
 ## v0.03 12/28/2018 3:05:16 PM
+#### Changed
+- default ChangeWorkplace returned allow_exchange param
+- IsInWalkingDist to IsInWalkingDistDome
 
 #### Added
 - code to override functions
 - mod config options
+- notifications on enabed or disabled AI
 
 #### Todo
 - mod config files

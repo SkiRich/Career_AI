@@ -7,10 +7,12 @@
 
 local lf_print = false -- Setup debug printing in local file
 
-local StringIdBase = 17764701500 -- Career AI  : 701500 - 701599 this file: 1-49 Next: 1
+local StringIdBase = 17764701500 -- Career AI  : 701500 - 701599 this file: 1-49 Next: 6
 
 local steam_id = "0"
 local mod_name = "Career A.I"
+local ModDir = CurrentModPath
+local iconCIAnotice = ModDir.."UI/Icons/CareerAINotice.png"
 
 -- Variable replacement for mod config steam id for check.
 local ModConfig_id = "1542863522" -- Reborn
@@ -41,6 +43,15 @@ function OnMsg.ModConfigChanged(mod_id, option_id, value, old_value, token)
   	-- g_CAIenabled
   	if option_id == "CAIenabled" then
   		g_CAIenabled = value
+
+	    local msgCIA = ""
+	    if g_CAIenabled then
+	    	msgCIA = T(StringIdBase + 4, "Career A.I. is enabled")
+	    else
+	    	msgCIA = T(StringIdBase + 5, "Career A.I. is disabled")
+	    end -- if g_CAIenabled
+	    AddCustomOnScreenNotification("CIA_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CIAnoticeDismissTime})
+	    PlayFX("UINotificationResearchComplete")
   	end -- if option_id
 
   end -- if g_ModConfigLoaded
@@ -55,6 +66,17 @@ function OnMsg.CityStart()
 	end -- if g_ModConfigLoaded
 end -- OnMsg.CityStart()
 
+function OnMsg.NewMapLoaded()
+	local msgCIA = ""
+	if g_CAIenabled then
+		msgCIA = T(StringIdBase + 4, "Career A.I. is enabled")
+	else
+		msgCIA = T(StringIdBase + 5, "Career A.I. is disabled")
+	end -- if g_CAIenabled
+	AddCustomOnScreenNotification("CIA_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CIAnoticeDismissTime})
+	PlayFX("UINotificationResearchComplete")
+end -- OnMsg.NewMapLoaded()
+
 
 function OnMsg.LoadGame()
 	-- load up defaults
@@ -62,4 +84,13 @@ function OnMsg.LoadGame()
 		local CAIenabled = ModConfig:Get("CIA", "CAIenabled")
 		if g_CAIenabled ~= CAIenabled then ModConfig:Set("CIA", "CAIenabled", g_CAIenabled, "reset") end
 	end -- if g_ModConfigLoaded
+
+	local msgCIA = ""
+	if g_CAIenabled then
+		msgCIA = T(StringIdBase + 4, "Career A.I. is enabled")
+	else
+		msgCIA = T(StringIdBase + 5, "Career A.I. is disabled")
+	end -- if g_CAIenabled
+	AddCustomOnScreenNotification("CIA_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CIAnoticeDismissTime})
+	PlayFX("UINotificationResearchComplete")
 end -- OnMsg.LoadGame()
