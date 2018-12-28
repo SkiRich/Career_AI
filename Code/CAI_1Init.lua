@@ -5,8 +5,12 @@
 -- Created Dec 24th, 2018
 
 
-local lf_print = true -- Setup debug printing in local file
-                       -- Use if lf_print then print("something") end
+local lf_print      = true -- Setup debug printing in local file
+local lf_printDebug = true -- debug ChooseWorkplace
+                           -- Use if lf_print then print("something") end
+
+GlobalVar("g_CAIenabled", true) -- var to turn on or off CAI
+g_CAIoverride = false -- var to override CAI if incompatible mods detected
 
 local IT = _InternalTranslate
 
@@ -50,13 +54,18 @@ end -- CAIgatherOpenJobs()
 
 
 -- gather colonists with specialities working non-specialty jobs
+-- exclude colonists at sanatorium and university (shouldn't have specialists in university anyway)
+-- exclude children
 local function CAIgatherColonists()
 	local colonists = UICity.labels.Colonist or empty_table
 	local jobhunters = {}
 
 	for i = 1, #colonists do
 		local c = colonists[i]
-		if c.specialist and c.specialist ~= "none" and c:_IsWorkStatusOk() and (not IsKindOf(c.workplace, "Sanatorium")) and ((not c.workplace) or (c.workplace and c.workplace.specialist ~= c.specialist)) then
+		if c.specialist and c.specialist ~= "none" and c:_IsWorkStatusOk() and
+		   (not IsKindOf(c.workplace, "Sanatorium")) and
+		   (not IsKindOf(c.workplace, "MartianUniversity")) and
+		   ((not c.workplace) or (c.workplace and c.workplace.specialist ~= c.specialist)) then
 			-- colonist is a specialist
 			-- colonist can work see Colonist:_IsWorkStatusOk()
 			-- is not in a sanatorium
@@ -81,28 +90,6 @@ local function CAIgetFreeSlots(workplace)
 	return numopenslots
 end -- CAIgetFreeSlots(employer)
 
-
--- re-write original function from workplace.lua
-local Old_ChooseWorkplace = ChooseWorkplace
-function ChooseWorkplace(unit, workplaces, allow_exchange)
-  local sworkplaces = {}
-  local specialist = unit.specialist or "none"
-
-  for i = 1, #workplaces do
-  	if workplaces[i].specialist == specialist then sworkplaces[#sworkplaces+1] = workplaces[i] end
-  end -- for i
-
-  if #sworkplaces > 0 then
-  	local best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, sworkplaces, true)
-    if best_bld and best_shift then
-    	-- if we got specialist work, then return that work
-      return best_bld, best_shift, best_to_kick, best_specialist_match
-    end -- if best_bld
-  end -- if there are specialist workplaces for the colonist
-
-  -- use old function as default
-  return Old_ChooseWorkplace(unit, workplaces, false)
-end -- ChooseWorkplace(unit, workplaces, allow_exchange)
 
 
 function CAIjobhunt(jobtype)
@@ -177,16 +164,62 @@ function CAIjobhunt(jobtype)
 		end -- applicant and employers
 	end -- for
 
-
-
 end -- CAIjobhunt()
 
 
+-- re-write original function from workplace.lua
+-- force specialist to only see specialist work if available
+local Old_ChooseWorkplace = ChooseWorkplace
+function ChooseWorkplace(unit, workplaces, allow_exchange)
+	-- short circuit if disabled
+	if (not g_CAIenabled) or g_CAIoverride then
+		return Old_ChooseWorkplace(unit, workplaces, allow_exchange)
+  end -- if disabled
+
+  -- short circuit for colonists working at Sanatoriums and University's
+  if IsKindOfClasses(unit.workplace, "Sanatorium", "MartianUniversity") then
+  	if lf_print then print(string.format("***** Colonists %s is at a Sanatorium or MU *****", IT(unit.name))) end
+  	return Old_ChooseWorkplace(unit, workplaces, allow_exchange)
+  end -- if in Sanatorium
+
+  local sworkplaces = {}
+  local specialist = unit.specialist or "" -- dont use none here since we dont want none type workplaces for specialists
+
+  for i = 1, #workplaces do
+  	if workplaces[i].specialist and workplaces[i].specialist == specialist then sworkplaces[#sworkplaces+1] = workplaces[i] end
+  end -- for i
+
+  if lf_printDebug then
+  	print("---------- ChooseWorkplace ------------")
+  	print("Specialist: ", specialist)
+  	print("Eligible workplaces: ", #sworkplaces)
+  end -- if lf_printDebug
+
+  if #sworkplaces > 0 then
+  	local best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, sworkplaces, true) -- true here to kick out non specs
+
+    if best_bld and best_shift then
+    	-- if we got specialist work, then return that work
+  	  if lf_printDebug then
+  		  print("Best Bld: ", (best_bld and IT(best_bld.name ~= "" and best_bld.name or best_bld.display_name)))
+  		  print("Best Shift: ", best_shift)
+  		  print(string.format("Best Kick: %s - %s", (best_to_kick and IT(best_to_kick.name) or ""), (best_to_kick and best_to_kick.specialist or "")  ))
+  		  print("Best Spec Match: ", best_specialist_match)
+  		  print("--------------------------------------")
+  	  end -- if lf_printDebug
+  	  return best_bld, best_shift, best_to_kick, best_specialist_match
+    end -- if best_bld
+  end -- if there are specialist workplaces for the colonist
+
+  -- use old function as default
+  if lf_printDebug then print("-+= Default ChooseWorkplace in Effect =+-") end
+  return Old_ChooseWorkplace(unit, workplaces, false) -- set false here to prevent non-specs from kicking out specs even if they would be better choices
+end -- ChooseWorkplace(unit, workplaces, allow_exchange)
 ---------------------------------------------- OnMsgs -----------------------------------------------
 
 
 function OnMsg.NewHour(hour)
-  if hour == 8 then
+  if hour == 8 and g_CAIenabled and (not g_CAIoverride) then
   	CAIjobhunt()
   end -- once a day at 8AM
 end -- OnMsg.LoadGame()

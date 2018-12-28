@@ -1,4 +1,13 @@
 # Changelog for Career A.I.
+## v0.03 12/28/2018 3:05:16 PM
+
+#### Added
+- code to override functions
+
+#### Todo
+- mod config files
+
+--------------------------------------------------------
 ## v0.02 12/27/2018 8:38:41 PM
 
 #### Added
