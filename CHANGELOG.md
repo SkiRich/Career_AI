@@ -1,4 +1,12 @@
 # Changelog for Career A.I.
+## v0.04 12/29/2018 4:01:55 AM
+#### Changed
+- CIA to CAI syntax
+
+#### Added
+- incompatible mods checks and overrides
+
+--------------------------------------------------------
 ## v0.03 12/28/2018 3:05:16 PM
 #### Changed
 - default ChangeWorkplace returned allow_exchange param

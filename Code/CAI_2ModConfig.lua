@@ -44,13 +44,15 @@ function OnMsg.ModConfigChanged(mod_id, option_id, value, old_value, token)
   	if option_id == "CAIenabled" then
   		g_CAIenabled = value
 
+  		CAIincompatibeModCheck()
+
 	    local msgCIA = ""
-	    if g_CAIenabled then
+	    if g_CAIenabled and (not g_CAIoverride) then
 	    	msgCIA = T(StringIdBase + 4, "Career A.I. is enabled")
 	    else
 	    	msgCIA = T(StringIdBase + 5, "Career A.I. is disabled")
 	    end -- if g_CAIenabled
-	    AddCustomOnScreenNotification("CIA_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CIAnoticeDismissTime})
+	    AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime})
 	    PlayFX("UINotificationResearchComplete")
   	end -- if option_id
 
@@ -61,37 +63,39 @@ end -- OnMsg.ModConfigChanged
 function OnMsg.CityStart()
 	-- load up defaults
 	if g_ModConfigLoaded then
-		local CAIenabled = ModConfig:Get("CIA", "CAIenabled")
-		if g_CAIenabled ~= CAIenabled then ModConfig:Set("CIA", "CAIenabled", g_CAIenabled, "reset") end
+		local CAIenabled = ModConfig:Get("CAI", "CAIenabled")
+		if g_CAIenabled ~= CAIenabled then ModConfig:Set("CAI", "CAIenabled", g_CAIenabled, "reset") end
 	end -- if g_ModConfigLoaded
 end -- OnMsg.CityStart()
 
 function OnMsg.NewMapLoaded()
+	CAIincompatibeModCheck()
 	local msgCIA = ""
-	if g_CAIenabled then
+	if g_CAIenabled and (not g_CAIoverride) then
 		msgCIA = T(StringIdBase + 4, "Career A.I. is enabled")
 	else
 		msgCIA = T(StringIdBase + 5, "Career A.I. is disabled")
 	end -- if g_CAIenabled
-	AddCustomOnScreenNotification("CIA_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CIAnoticeDismissTime})
+	AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime})
 	PlayFX("UINotificationResearchComplete")
 end -- OnMsg.NewMapLoaded()
 
 
 function OnMsg.LoadGame()
+	CAIincompatibeModCheck()
 	-- load up defaults
 	if g_ModConfigLoaded then
-		local CAIenabled = ModConfig:Get("CIA", "CAIenabled")
-		if g_CAIenabled ~= CAIenabled then ModConfig:Set("CIA", "CAIenabled", g_CAIenabled, "reset") end
+		local CAIenabled = ModConfig:Get("CAI", "CAIenabled")
+		if g_CAIenabled ~= CAIenabled then ModConfig:Set("CAI", "CAIenabled", g_CAIenabled, "reset") end
 	end -- if g_ModConfigLoaded
 
 	local msgCIA = ""
-	if g_CAIenabled then
+	if g_CAIenabled and (not g_CAIoverride) then
 		msgCIA = T(StringIdBase + 4, "Career A.I. is enabled")
 	else
 		msgCIA = T(StringIdBase + 5, "Career A.I. is disabled")
 	end -- if g_CAIenabled
-	AddCustomOnScreenNotification("CIA_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CIAnoticeDismissTime})
+	AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime})
 	PlayFX("UINotificationResearchComplete")
 end -- OnMsg.LoadGame()
 

@@ -12,10 +12,18 @@ local lf_printDebug = false -- debug ChooseWorkplace
 
 local ModDir = CurrentModPath
 local iconCIAnotice = ModDir.."UI/Icons/CareerAINotice.png"
+local StringIdBase = 17764701500 -- Career AI  : 701500 - 701599 this file: 50-99 Next: 50
+
+local incompatibleMods = {
+	{name = "Smarter Migration AI", id = "1343552210"},
+	{name = "Smarter Worker AI",    id = "1338867491"},
+	{name = "Better AI",            id = "1361377883"},
+	--{name = "Mod Config Reborn",    id = "1542863522"}, -- for testing -- remove before upload
+} -- incompatibleMods
 
 GlobalVar("g_CAIenabled", true) -- var to turn on or off CAI
 g_CAIoverride = false -- var to override CAI if incompatible mods detected
-g_CIAnoticeDismissTime = 15000
+g_CAInoticeDismissTime = 15000
 
 local IT = _InternalTranslate
 
@@ -60,7 +68,7 @@ end -- CAIgatherOpenJobs()
 
 -- gather colonists with specialities working non-specialty jobs
 -- exclude colonists at sanatorium and university (shouldn't have specialists in university anyway)
--- exclude children
+-- exclude children and seniors that cannot work
 local function CAIgatherColonists()
 	local colonists = UICity.labels.Colonist or empty_table
 	local jobhunters = {}
@@ -73,7 +81,7 @@ local function CAIgatherColonists()
 		   ((not c.workplace) or (c.workplace and c.workplace.specialist ~= c.specialist)) then
 			-- colonist is a specialist
 			-- colonist can work see Colonist:_IsWorkStatusOk()
-			-- is not in a sanatorium
+			-- is not in a sanatorium or MU
 			-- jobless gets priority then specialists working in the wrong specialty
 			if not jobhunters[c.specialist] then jobhunters[c.specialist] = {} end -- create sub-table
 			table.insert(jobhunters[c.specialist], c)
@@ -96,7 +104,7 @@ local function CAIgetFreeSlots(workplace)
 end -- CAIgetFreeSlots(employer)
 
 
-
+-- main function called once daily to move specialists around to better jobs
 function CAIjobhunt(jobtype)
 	local openjobs = CAIgatherOpenJobs()
 	local jobhunters = CAIgatherColonists()
@@ -227,7 +235,41 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   return Old_ChooseWorkplace(unit, workplaces, allow_exchange)
 end -- ChooseWorkplace(unit, workplaces, allow_exchange)
 
+-- incompatible mod check
+function CAIincompatibeModCheck()
+	local foundIncompatibleMods = {}
+	for i = 1, #incompatibleMods do
+		if table.find(ModsLoaded, "steam_id", incompatibleMods[i].id) then foundIncompatibleMods[#foundIncompatibleMods+1] = incompatibleMods[i].name end
+	end -- for i
 
+	if #foundIncompatibleMods > 0 then
+		g_CAIoverride = true -- set override
+    CreateRealTimeThread(function()
+        local params = {
+              title = T(StringIdBase + 50, "Career A.I. Incompatible Mods Check"),
+               text = "",
+            choice1 = T(StringIdBase + 51, "OK"),
+              image = "UI/Messages/hints.tga",
+              start_minimized = false,
+        } -- params
+        local texts = {
+        	T(StringIdBase + 52, "<em>Career A.I. settings overridden and it has been turned off.</em>"),
+        	T(StringIdBase + 53, "Career A.I. will not function as long as these mods are enabled."),
+        	T(StringIdBase + 54, "The following incompatible mods have been detected:<newline>"),
+        }
+        for i = 1, #foundIncompatibleMods do
+        	texts[#texts+1] = foundIncompatibleMods[i]
+        end -- for i
+        params.text = table.concat(texts, "<newline>")
+        local choice = WaitPopupNotification(false, params)
+        if choice == 1 then
+        end -- if statement
+        local msgCIA = T(StringIdBase + 5, "Career A.I. is disabled")
+        AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime})
+	      PlayFX("UINotificationResearchComplete")
+    end ) -- CreateRealTimeThread
+  end -- if foundIncompatibleMods
+end -- function end
 
 ---------------------------------------------- OnMsgs -----------------------------------------------
 
