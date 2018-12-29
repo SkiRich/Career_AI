@@ -213,6 +213,10 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   		  print("--------------------------------------")
   	  end -- if lf_printDebug
 
+  	  -- prevent recently kicked out workers from coming back and kicking someone else out until expiry time.
+  	  -- this will prevent rapidly flipping jobs
+  	  if best_to_kick then best_to_kick:SetWorkplace(false) end
+
   	  -- return vars
   	  return best_bld, best_shift, best_to_kick, best_specialist_match
     end -- if best_bld
