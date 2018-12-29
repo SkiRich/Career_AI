@@ -9,7 +9,7 @@ local lf_print = false -- Setup debug printing in local file
 
 local StringIdBase = 17764701500 -- Career AI  : 701500 - 701599 this file: 1-49 Next: 6
 
-local steam_id = "0"
+local steam_id = "1606337956"
 local mod_name = "Career A.I"
 local ModDir = CurrentModPath
 local iconCIAnotice = ModDir.."UI/Icons/CareerAINotice.png"
@@ -94,3 +94,31 @@ function OnMsg.LoadGame()
 	AddCustomOnScreenNotification("CIA_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CIAnoticeDismissTime})
 	PlayFX("UINotificationResearchComplete")
 end -- OnMsg.LoadGame()
+
+
+local function SRDailyPopup()
+    CreateRealTimeThread(function()
+        local params = {
+              title = "Non-Author Mod Copy",
+               text = "We have detected an illegal copy version of : ".. mod_name .. ". Please uninstall the existing version.",
+            choice1 = "Download the Original [Opens in new window]",
+            choice2 = "Damn you copycats!",
+            choice3 = "I don't care...",
+              image = "UI/Messages/death.tga",
+              start_minimized = false,
+        } -- params
+        local choice = WaitPopupNotification(false, params)
+        if choice == 1 then
+        	OpenUrl("https://steamcommunity.com/sharedfiles/filedetails/?id=" .. steam_id, true)
+        end -- if statement
+    end ) -- CreateRealTimeThread
+end -- function end
+
+
+function OnMsg.NewDay(day)
+  if table.find(ModsLoaded, "steam_id", steam_id)~= nil then
+    --nothing
+  else
+    SRDailyPopup()
+  end -- SRDailyPopup
+end --OnMsg.NewDay(day)
