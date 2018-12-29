@@ -3,6 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
+-- Updated Dec 29th, 2018
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -22,8 +23,8 @@ local incompatibleMods = {
 } -- incompatibleMods
 
 GlobalVar("g_CAIenabled", true) -- var to turn on or off CAI
-g_CAIoverride = false -- var to override CAI if incompatible mods detected
-g_CAInoticeDismissTime = 15000
+g_CAIoverride          = false  -- var to override CAI if incompatible mods detected
+g_CAInoticeDismissTime = 15000  -- var to time the notification dismissal 15 seconds
 
 local IT = _InternalTranslate
 
@@ -75,12 +76,12 @@ local function CAIgatherColonists()
 
 	for i = 1, #colonists do
 		local c = colonists[i]
-		if c.specialist and c.specialist ~= "none" and c:_IsWorkStatusOk() and
+		if c.specialist and c.specialist ~= "none" and c:CanWork() and
 		   (not IsKindOf(c.workplace, "Sanatorium")) and
 		   (not IsKindOf(c.workplace, "MartianUniversity")) and
 		   ((not c.workplace) or (c.workplace and c.workplace.specialist ~= c.specialist)) then
 			-- colonist is a specialist
-			-- colonist can work see Colonist:_IsWorkStatusOk()
+			-- colonist can work see Colonist:CanWork()
 			-- is not in a sanatorium or MU
 			-- jobless gets priority then specialists working in the wrong specialty
 			if not jobhunters[c.specialist] then jobhunters[c.specialist] = {} end -- create sub-table
@@ -148,23 +149,37 @@ function CAIjobhunt(jobtype)
 						  	if applicants[1]:CanReachBuilding(employers[i]) then -- if they can walk or get a ride then move
 						  	  local a_dome = applicants[1].dome or applicants[1].current_dome or applicants[1]:GetPos() -- current_dome is just in case the colonist is currently moving domes.
 						  	  local e_dome = employers[i].parent_dome
-						  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  if a_dome == e_dome or IsInWalkingDistDome(a_dome, e_dome) then
 						  	  	-- if applicant can get to the job, then set it right away
-						  	  	applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
-						  	    if a_dome ~= e_dome and e_dome:GetFreeLivingSpace() > 0 then applicants[1]:SetForcedDome(e_dome) end -- relocate colonist if there is space
-						  	  elseif a_dome ~= e_dome and IsTransportAvailableBetween(a_dome, e_dome) then
+						  	  	if a_dome == e_dome then
+						  	  		-- if home dome
+						  	  		if lf_print then print(string.format("Applicant %s is staying in home dome %s", IT(applicants[1].name), IT(e_dome.name))) end
+						  	  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
+						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
+						  	  	elseif e_dome:GetFreeLivingSpace() > 0 then
+						  	  		-- not home but but can migrate
+						  	  		if lf_print then print(string.format("Applicant %s is moving to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
+						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
+						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
+						  	  		applicants[1]:SetForcedDome(e_dome)
+						  	  	elseif e_dome:CanColonistsFromDifferentDomesWorkServiceTrainHere() and a_dome.allow_work_in_connected then
+						  	  		-- not home dome can commute
+						  	  		if lf_print then print(string.format("Applicant %s is commuting to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
+						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
+						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
+						  	    end -- if a_dome == e_dome
+						  	  elseif a_dome ~= e_dome and e_dome.accept_colonists and IsTransportAvailableBetween(a_dome, e_dome) then
+						  	  	-- not home dome must relocate
 						  	  	-- relocate colonist regardless of space if they can get there via shuttle
+						  	  	if lf_print then print(string.format("Applicant %s is relocating to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
+						  	  	if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	applicants[1]:SetWorkplace(employers[i], shift)
 						  	  	applicants[1]:SetForcedDome(e_dome)
-						  	  end --  if IsInWalkingDist
-						  	  --employers[i]:ColonistInteract(applicants[1])
-						  	  --applicants[1]:UpdateWorkplace()
-						  	  --applicants[1]:SetForcedDome(employers[i].parent_dome)
+						  	  end --  if a_dome == e_dome or IsInWalkingDist
 						  	  table.remove(applicants, 1)
 						  	else
 						  		if lf_print then print("Applicant cant reach prospective employer") end
-						  	end -- if can reach
+						  	end -- if applicants[1]:CanReachBuilding(employers[i])
 						  else
 						  	if lf_print then print("No more applicants available for employer: ", IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name)) end
 						  end -- if #applicants > 0
@@ -173,7 +188,10 @@ function CAIjobhunt(jobtype)
 				end -- for shift
 			end -- for i
     else
-    	if lf_print then print("No match for applicants and employers in:", speclist[spec]) end
+    	if lf_print then
+    		print("==========================================================")
+    		print("No match for applicants and employers in:", speclist[spec])
+    	end -- if lf_print
 		end -- applicant and employers
 	end -- for
 
@@ -181,7 +199,8 @@ end -- CAIjobhunt()
 
 
 -- re-write original function from workplace.lua
--- force specialist to only see specialist work if available
+-- force specialist to choose specialist work first if available otherwise anyplace
+-- force non-specialist to choose non-specialist work first if available, otherwise anyplace
 local Old_ChooseWorkplace = ChooseWorkplace
 function ChooseWorkplace(unit, workplaces, allow_exchange)
 	-- short circuit if disabled
@@ -196,7 +215,7 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   end -- if in Sanatorium
 
   local sworkplaces = {}
-  local specialist = unit.specialist or "" -- dont use none here since we dont want none type workplaces for specialists
+  local specialist = unit.specialist or "none"
 
   for i = 1, #workplaces do
   	if workplaces[i].specialist and workplaces[i].specialist == specialist then sworkplaces[#sworkplaces+1] = workplaces[i] end
