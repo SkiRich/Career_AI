@@ -1,4 +1,13 @@
 # Changelog for Career A.I.
+## v0.08 12/30/2018 5:51:13 PM
+#### Changed
+- NewHour()
+- various syntax around CIA and CAI for TogglePrint
+
+#### Added
+- CAIjobmigrate()
+
+--------------------------------------------------------
 ## v0.07 12/30/2018 4:28:33 AM
 #### Changed
 - ChooseWorkplace() -- redesigned it to prevent job hopping

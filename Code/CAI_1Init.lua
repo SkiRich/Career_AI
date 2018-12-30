@@ -3,14 +3,14 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Dec 29th, 2018
+-- Updated Dec 30th, 2018
 
 
 local lf_print      = false -- Setup debug printing in local file
 local lf_printDebug = false -- debug ChooseWorkplace
 local lf_watchSpec  = false -- specialist type to watch during debug
                             -- Use if lf_print then print("something") end
-                            -- use Msg("ToggleLFPrint", "CIA", "printdebug", "geologist") to toggle
+                            -- use Msg("ToggleLFPrint", "CAI", "printdebug", "geologist") to toggle
 
 local ModDir = CurrentModPath
 local iconCIAnotice = ModDir.."UI/Icons/CareerAINotice.png"
@@ -31,7 +31,7 @@ local IT = _InternalTranslate
 
 -- gather all the open jobs that want specialists
 -- jobtype   : string, optional - gather all the open jobs for any jobtype using jobtype = "thejobtype"
-function CAIgatherOpenJobs(jobtype)
+local function CAIgatherOpenJobs(jobtype)
 	local openjobs = {counts = {}, employers = {}}
 	local jobsbyspec = {}
 	local workplaces = UICity.labels.Workplace or empty_table
@@ -75,7 +75,7 @@ end -- CAIgatherOpenJobs()
 -- exclude colonists at sanatorium and university (shouldn't have specialists in university anyway)
 -- exclude children and seniors that cannot work
 -- jobtype   : string, optional - gather all the colonists for any jobtype using jobtype = "thejobtype"
-function CAIgatherColonists(jobtype)
+local function CAIgatherColonists(jobtype)
 	local colonists = UICity.labels.Colonist or empty_table
 	local jobhunters = {}
 
@@ -234,6 +234,29 @@ function CAIjobhunt(jobtype)
 end -- CAIjobhunt()
 
 
+-- check current home dome versus job dome and if possible move to job dome
+function CAIjobmigrate()
+	local UICity = UICity
+	local colonists = UICity.labels.Colonist or empty_table
+	local count  = 0
+
+	for i = 1, #colonists do
+		if colonists[i].workplace then
+			local c  = colonists[i]
+			local cw = c.workplace
+			local c_dome = c.dome or c.current_dome
+			local cw_dome = cw.parent_dome or FindNearestObject(UICity.labels.Dome, cw)
+			if (not IsKindOfClasses(cw, "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(c, cw) then
+				c:SetForcedDome(cw_dome)
+				count = count + 1
+				if lf_print then print(string.format("Colonist %s is moving from %s to %s", IT(c.name), IT(c_dome.name), IT(c.cw_dome.name))) end
+			end -- if c_dome ~= cw_dome
+		end -- if
+	end -- for i
+	if lf_print then print("Total colonist moves: ", count) end
+end -- CAIjobmigrate()
+
+
 -- re-write original function from workplace.lua
 -- force specialist to choose specialist work first if available otherwise anyplace
 -- force non-specialist to choose non-specialist work first if available, otherwise anyplace
@@ -273,7 +296,7 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   if best_bld and best_shift then
     -- if we got specialist work and we can get there, then return that work
   	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
-  		local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UICity.labels.Dome, best_bld)
+  		local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UICity.labels.Dome, best_bld))
   	  print("Best Bld: ", (best_bld and IT(best_bld.name ~= "" and best_bld.name or best_bld.display_name)), " located at: ", IT(best_bld_dome.name))
   	  print("Best Shift: ", best_shift)
   	  print(string.format("Best Kick: %s - %s", (best_to_kick and IT(best_to_kick.name) or ""), (best_to_kick and best_to_kick.specialist or "")  ))
@@ -281,7 +304,7 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   	  print("-----------------------------------------------------------")
   	end -- if lf_printDebug
   else
-  	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, allow_exchange) -- use default
+  	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, allow_exchange) -- use default and prevent job hopping.
     if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
     	local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UICity.labels.Dome, best_bld))
     	print("-+++++= Default ChooseWorkplace in Effect =+++++-")
@@ -350,11 +373,17 @@ function OnMsg.NewHour(hour)
   if hour == 16 and g_CAIenabled and (not g_CAIoverride) then
   	CAIjobhunt("none")
   end -- once a day at 8AM
+
+  -- job migrate AI
+  if hour == 22 and g_CAIenabled and (not g_CAIoverride) then
+  	CAIjobmigrate()
+  end -- once a day at 8AM
+
 end -- OnMsg.LoadGame()
 
 function OnMsg.ToggleLFPrint(modname, lfvar, jobtype)
-	-- use Msg("ToggleLFPrint", "CIA", "printdebug") to toggle
-	if modname == "CIA" then
+	-- use Msg("ToggleLFPrint", "CAI", "printdebug") to toggle
+	if modname == "CAI" then
 		if lfvar then
 			if lfvar == "printdebug" then lf_printDebug = not lf_printDebug end
 		else
