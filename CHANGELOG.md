@@ -1,4 +1,20 @@
 # Changelog for Career A.I.
+## v0.06 12/29/2018 6:11:05 PM
+#### Changed
+- CAIgatherOpenJobs() to CAIgatherOpenJobs(jobtype)  now includes lookup for jobtype if specified
+- CAIgatherColonists() to CAIgatherColonists(jobtype)
+- CAIjobhunt() to CAIjobhunt(jobtype)
+
+#### Added
+- added functionality for jobtype jobhunting
+- function CAIcanWorkHere(colonist, workplace) -- currently not used
+- function CAIcanMoveHere(colonist, workplace)
+- job hunting AI for non-specialists
+
+#### Todo
+- create job migration AI
+
+--------------------------------------------------------
 ## v0.05 12/29/2018 4:28:08 AM
 #### Changed
 - ChangeWorkpace() -- allowed for none speciality

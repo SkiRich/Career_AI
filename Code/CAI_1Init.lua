@@ -29,11 +29,13 @@ g_CAInoticeDismissTime = 15000  -- var to time the notification dismissal 15 sec
 local IT = _InternalTranslate
 
 -- gather all the open jobs that want specialists
-local function CAIgatherOpenJobs()
+-- jobtype   : string, optional - gather all the open jobs for any jobtype using jobtype = "thejobtype"
+function CAIgatherOpenJobs(jobtype)
 	local openjobs = {counts = {}, employers = {}}
 	local jobsbyspec = {}
 	local workplaces = UICity.labels.Workplace or empty_table
 
+  -- gather all jobs by spec type
 	for i = 1, #workplaces do
 		if workplaces[i].specialist then -- check to make sure it not nil first (mostly for poorly coded mods)
 		  if not jobsbyspec[workplaces[i].specialist] then jobsbyspec[workplaces[i].specialist] = {} end -- setup sub-table
@@ -42,7 +44,7 @@ local function CAIgatherOpenJobs()
 	end -- for i
 
 	for jobspec, workplace in pairs(jobsbyspec) do
-		if jobspec ~= "none" then
+		if (jobtype and jobspec == jobtype) or ((not jobtype) and jobspec ~= "none") then
 			if not openjobs.employers[jobspec] then openjobs.employers[jobspec] = {} end -- setup sub-table
 			if not openjobs.counts[jobspec] then openjobs.counts[jobspec] = 0 end -- setup sub-table
 			for i = 1, #workplace do
@@ -68,15 +70,17 @@ end -- CAIgatherOpenJobs()
 
 
 -- gather colonists with specialities working non-specialty jobs
+-- gather colonists with non-pecialities working in specialty jobs
 -- exclude colonists at sanatorium and university (shouldn't have specialists in university anyway)
 -- exclude children and seniors that cannot work
-local function CAIgatherColonists()
+-- jobtype   : string, optional - gather all the colonists for any jobtype using jobtype = "thejobtype"
+function CAIgatherColonists(jobtype)
 	local colonists = UICity.labels.Colonist or empty_table
 	local jobhunters = {}
 
 	for i = 1, #colonists do
 		local c = colonists[i]
-		if c.specialist and c.specialist ~= "none" and c:CanWork() and
+		if ((jobtype and c.specialist and c.specialist == jobtype) or ((not jobtype) and c.specialist and c.specialist ~= "none")) and c:CanWork() and
 		   (not IsKindOf(c.workplace, "Sanatorium")) and
 		   (not IsKindOf(c.workplace, "MartianUniversity")) and
 		   ((not c.workplace) or (c.workplace and c.workplace.specialist ~= c.specialist)) then
@@ -93,22 +97,52 @@ local function CAIgatherColonists()
 	return jobhunters
 end -- CAIgatherColonists()
 
-
+-- returns free work slots that are open and active/not closed or shift closed
 local function CAIgetFreeSlots(workplace)
 	local numopenslots = {}
 	if ValidateBuilding(workplace) then -- check to make sure building is not destroyed
-	  numopenslots[1] = workplace:GetFreeWorkSlots(1)
-	  numopenslots[2] = workplace:GetFreeWorkSlots(2)
-	  numopenslots[3] = workplace:GetFreeWorkSlots(3)
+	  numopenslots[1] = workplace:GetFreeWorkSlots(1) or 0
+	  numopenslots[2] = workplace:GetFreeWorkSlots(2) or 0
+	  numopenslots[3] = workplace:GetFreeWorkSlots(3) or 0
 	end -- if ValidateBuilding
 	return numopenslots
 end -- CAIgetFreeSlots(employer)
 
 
+-- determine if colonist can work at the job with enforcement
+-- currently not used
+local function CAIcanWorkHere(colonist, workplace)
+  if workplace.specialist_enforce_mode then
+    if (workplace.specialist or "none") ~= (colonist.specialist or "none") then
+      return false
+    else
+    	return true
+    end -- if workplace specialties dont match
+  else
+  	return true
+  end
+end -- CAIcanWorkHere(colonist, workplace)
+
+
+-- determine if colonist can move into dome with dome filters
+local function CAIcanMoveHere(colonist, workplace)
+	local e_dome = workplace.parent_dome or FindNearestObject(UICity.labels.Dome, workplace)
+	local eval   = TraitFilterColonist(e_dome.trait_filter, colonist.traits)
+	if eval >= 0 then
+		return true
+	else
+		return false
+	end -- if eval
+end -- CAIcanMoveHere(colonist, workplace)
+
+
 -- main function called once daily to move specialists around to better jobs
+-- jobtype   : string, optional - jobhunt for jobtype using jobtype = "thejobtype"
 function CAIjobhunt(jobtype)
-	local openjobs = CAIgatherOpenJobs()
-	local jobhunters = CAIgatherColonists()
+	local UICity = UICity
+	local FindNearestObject = FindNearestObject
+	local openjobs = CAIgatherOpenJobs(jobtype)
+	local jobhunters = CAIgatherColonists(jobtype)
 	local totalopenjobs = 0
 	local speclist = jobtype and {jobtype} or ColonistSpecializationList or empty_table
 
@@ -148,7 +182,7 @@ function CAIjobhunt(jobtype)
 						  	end -- if lf_print
 						  	if applicants[1]:CanReachBuilding(employers[i]) then -- if they can walk or get a ride then move
 						  	  local a_dome = applicants[1].dome or applicants[1].current_dome or applicants[1]:GetPos() -- current_dome is just in case the colonist is currently moving domes.
-						  	  local e_dome = employers[i].parent_dome
+						  	  local e_dome = employers[i].parent_dome or FindNearestObject(UICity.labels.Dome, employers[i])
 						  	  if a_dome == e_dome or IsInWalkingDistDome(a_dome, e_dome) then
 						  	  	-- if applicant can get to the job, then set it right away
 						  	  	if a_dome == e_dome then
@@ -156,7 +190,7 @@ function CAIjobhunt(jobtype)
 						  	  		if lf_print then print(string.format("Applicant %s is staying in home dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
-						  	  	elseif e_dome:GetFreeLivingSpace() > 0 then
+						  	  	elseif e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) then
 						  	  		-- not home but but can migrate
 						  	  		if lf_print then print(string.format("Applicant %s is moving to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
@@ -168,9 +202,10 @@ function CAIjobhunt(jobtype)
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	    end -- if a_dome == e_dome
-						  	  elseif a_dome ~= e_dome and e_dome.accept_colonists and IsTransportAvailableBetween(a_dome, e_dome) then
+						  	  elseif a_dome ~= e_dome and e_dome.accept_colonists and IsTransportAvailableBetween(a_dome, e_dome) and CAIcanMoveHere(applicants[1], employers[i]) then
 						  	  	-- not home dome must relocate
 						  	  	-- relocate colonist regardless of space if they can get there via shuttle
+						  	  	-- obey dome filters
 						  	  	if lf_print then print(string.format("Applicant %s is relocating to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  	if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	applicants[1]:SetWorkplace(employers[i], shift)
@@ -294,8 +329,14 @@ end -- function end
 
 
 function OnMsg.NewHour(hour)
+	-- specialists jobhunt
   if hour == 8 and g_CAIenabled and (not g_CAIoverride) then
   	CAIjobhunt()
+  end -- once a day at 8AM
+
+  -- non-specialist jobhunt
+  if hour == 16 and g_CAIenabled and (not g_CAIoverride) then
+  	CAIjobhunt("none")
   end -- once a day at 8AM
 end -- OnMsg.LoadGame()
 
