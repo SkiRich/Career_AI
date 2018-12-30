@@ -8,8 +8,9 @@
 
 local lf_print      = false -- Setup debug printing in local file
 local lf_printDebug = false -- debug ChooseWorkplace
+local lf_watchSpec  = false -- specialist type to watch during debug
                             -- Use if lf_print then print("something") end
-                            -- use Msg("ToggleLFPrint", "CIA", "printdebug") to toggle
+                            -- use Msg("ToggleLFPrint", "CIA", "printdebug", "geologist") to toggle
 
 local ModDir = CurrentModPath
 local iconCIAnotice = ModDir.."UI/Icons/CareerAINotice.png"
@@ -256,38 +257,48 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   	if workplaces[i].specialist and workplaces[i].specialist == specialist then sworkplaces[#sworkplaces+1] = workplaces[i] end
   end -- for i
 
-  if lf_printDebug then
-  	print("---------- ChooseWorkplace ------------")
-  	print("Specialist: ", specialist)
-  	print("Eligible workplaces: ", #sworkplaces)
+  if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
+  	local unit_dome = unit.dome or unit.current_dome or "Unknown"
+  	print("--------------------- ChooseWorkplace -----------------------")
+  	print(string.format("Specialist: %s - %s from %s", specialist, IT(unit.name), IT(unit_dome.name or unit_dome)))
+  	print("Eligible specialist workplaces: ", #sworkplaces)
   end -- if lf_printDebug
 
+  local best_bld, best_shift, best_to_kick, best_specialist_match
+
   if #sworkplaces > 0 then
-  	local best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, sworkplaces, true) -- true here to kick out non specs
+  	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, sworkplaces, true) -- true here to kick out non specs
+  end -- if #sworkplaces
 
-    if best_bld and best_shift then
-    	-- if we got specialist work, then return that work
-  	  if lf_printDebug then
-  		  print("Best Bld: ", (best_bld and IT(best_bld.name ~= "" and best_bld.name or best_bld.display_name)))
-  		  print("Best Shift: ", best_shift)
-  		  print(string.format("Best Kick: %s - %s", (best_to_kick and IT(best_to_kick.name) or ""), (best_to_kick and best_to_kick.specialist or "")  ))
-  		  print("Best Spec Match: ", best_specialist_match)
-  		  print("--------------------------------------")
-  	  end -- if lf_printDebug
+  if best_bld and best_shift then
+    -- if we got specialist work and we can get there, then return that work
+  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
+  		local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UICity.labels.Dome, best_bld)
+  	  print("Best Bld: ", (best_bld and IT(best_bld.name ~= "" and best_bld.name or best_bld.display_name)), " located at: ", IT(best_bld_dome.name))
+  	  print("Best Shift: ", best_shift)
+  	  print(string.format("Best Kick: %s - %s", (best_to_kick and IT(best_to_kick.name) or ""), (best_to_kick and best_to_kick.specialist or "")  ))
+  	  print("Best Spec Match: ", best_specialist_match)
+  	  print("-----------------------------------------------------------")
+  	end -- if lf_printDebug
+  else
+  	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, allow_exchange) -- use default
+    if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
+    	local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UICity.labels.Dome, best_bld))
+    	print("-+++++= Default ChooseWorkplace in Effect =+++++-")
+    	print("Eligible workplaces: ", #workplaces)
+  	  print("Best Bld: ", (best_bld and IT(best_bld.name ~= "" and best_bld.name or best_bld.display_name)), " located at: ", best_bld_dome and IT(best_bld_dome.name))
+  	  print("Best Shift: ", best_shift)
+  	  print(string.format("Best Kick: %s - %s", (best_to_kick and IT(best_to_kick.name) or ""), (best_to_kick and best_to_kick.specialist or "")  ))
+  	  print("Best Spec Match: ", best_specialist_match)
+  	  print("----------------------------------------------")
+    end -- if lf_printDebug
+  end -- if best_bld and best_shift
 
-  	  -- prevent recently kicked out workers from coming back and kicking someone else out until expiry time.
-  	  -- this will prevent rapidly flipping jobs
-  	  if best_to_kick then best_to_kick:SetWorkplace(false) end
+  -- return vars
+  return best_bld, best_shift, best_to_kick, best_specialist_match
 
-  	  -- return vars
-  	  return best_bld, best_shift, best_to_kick, best_specialist_match
-    end -- if best_bld
-  end -- if there are specialist workplaces for the colonist
-
-  -- use old function as default
-  if lf_printDebug then print("-+= Default ChooseWorkplace in Effect =+-") end
-  return Old_ChooseWorkplace(unit, workplaces, allow_exchange)
 end -- ChooseWorkplace(unit, workplaces, allow_exchange)
+
 
 -- incompatible mod check
 function CAIincompatibeModCheck()
@@ -313,6 +324,7 @@ function CAIincompatibeModCheck()
         }
         for i = 1, #foundIncompatibleMods do
         	texts[#texts+1] = foundIncompatibleMods[i]
+        	ModLog(string.format("CAI found an incompatible mod: %s", foundIncompatibleMods[i]))
         end -- for i
         params.text = table.concat(texts, "<newline>")
         local choice = WaitPopupNotification(false, params)
@@ -340,7 +352,7 @@ function OnMsg.NewHour(hour)
   end -- once a day at 8AM
 end -- OnMsg.LoadGame()
 
-function OnMsg.ToggleLFPrint(modname, lfvar)
+function OnMsg.ToggleLFPrint(modname, lfvar, jobtype)
 	-- use Msg("ToggleLFPrint", "CIA", "printdebug") to toggle
 	if modname == "CIA" then
 		if lfvar then
@@ -349,4 +361,5 @@ function OnMsg.ToggleLFPrint(modname, lfvar)
 			lf_print = not lf_print
 		end -- if lfvar
   end -- if
+  lf_watchSpec = jobtype
 end -- OnMsg.ToggleLFPrint(modname)

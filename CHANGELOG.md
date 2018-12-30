@@ -1,4 +1,18 @@
 # Changelog for Career A.I.
+## v0.07 12/30/2018 4:28:33 AM
+#### Changed
+- ChooseWorkplace() -- redesigned it to prevent job hopping
+
+#### Added
+- ModLog for incompat mods alerts
+
+#### Fixed Issues
+- job hopping - specialists working in non-spec jobs seem to leave and come back.  Need to diagnose ChooseWorkplace.
+
+#### Todo
+- create job migration AI
+
+--------------------------------------------------------
 ## v0.06 12/29/2018 6:11:05 PM
 #### Changed
 - CAIgatherOpenJobs() to CAIgatherOpenJobs(jobtype)  now includes lookup for jobtype if specified
