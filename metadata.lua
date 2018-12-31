@@ -1,8 +1,8 @@
 return PlaceObj('ModDef', {
 	'title', "Career A.I.",
-	'description', "Career A.I.\nv1.0 Dec 29th, 2018\nby SkiRich",
+	'description', "Career A.I.\nv1.0.1 Dec 31th, 2018\nby SkiRich",
 	'image', "CareerAILogo.png",
-	'last_changes', "v1.0, Dec 29th, 2018",
+	'last_changes', "v1.0.1 Dec 31th, 2018",
 	'ignore_files', {
 		"*.git/*",
 		"*.svn/*",
@@ -12,10 +12,10 @@ return PlaceObj('ModDef', {
 	'id', "x30w7W0",
 	'steam_id', "1606337956",
 	'author', "SkiRich",
-	'version', 5,
+	'version', 7,
 	'lua_revision', 238808,
 	'code', {"Code/CAI_1Init.lua","Code/CAI_2ModConfig.lua"},
-	'saved', 1546243565,
+	'saved', 1546292097,
 	'screenshot1', "Images/CareerAILogo.png",
 	'screenshot2', "Images/CAINotice.png",
 	'screenshot3', "Images/CAIModConfig.png",
