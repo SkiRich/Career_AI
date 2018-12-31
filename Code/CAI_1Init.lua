@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Dec 30th, 2018
+-- Updated Dec 31th, 2018
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -17,9 +17,11 @@ local iconCIAnotice = ModDir.."UI/Icons/CareerAINotice.png"
 local StringIdBase = 17764701500 -- Career AI  : 701500 - 701599 this file: 50-99 Next: 50
 
 local incompatibleMods = {
-	{name = "Smarter Migration AI", id = "1343552210"},
-	{name = "Smarter Worker AI",    id = "1338867491"},
-	{name = "Better AI",            id = "1361377883"},
+	{name = "Smarter Migration AI",      id = "1343552210"},
+	{name = "Smarter Worker AI",         id = "1338867491"},
+	{name = "Better AI",                 id = "1361377883"},
+	{name = "Martian Economy",           id = "1340466409"},
+	{name = "Improved Martian Economy",  id = "1575009362"},
 	--{name = "Mod Config Reborn",    id = "1542863522"}, -- for testing -- remove before upload
 } -- incompatibleMods
 
