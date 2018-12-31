@@ -1,4 +1,11 @@
 # Changelog for Career A.I.
+## 1.0.1 12/31/2018 4:31:17 PM
+
+#### Added
+- Martian Economy to the incompatible list
+- Improved Martian Economy to the incompatible list
+
+--------------------------------------------------------
 ## v0.08 12/30/2018 5:51:13 PM
 #### Changed
 - NewHour()
