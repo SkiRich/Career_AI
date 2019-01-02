@@ -1,4 +1,17 @@
 # Changelog for Career A.I.
+## version 01/02/2019 2:19:56 PM
+#### Changed
+- CAIgatherOpenJobs()
+- CAIjobhunt(jobtype)
+  - added avoid_workplace check and remove applicant if they cant reach the employer
+
+#### Added
+- function CAIvalidateBld(bld) - biome checks to CAIgatherOpenJobs()
+
+#### Fixed Issues
+- Colonists going into turned off buildings and turned off domes.
+
+--------------------------------------------------------
 ## 1.0.1 12/31/2018 4:31:17 PM
 
 #### Added
