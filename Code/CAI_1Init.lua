@@ -31,6 +31,17 @@ g_CAInoticeDismissTime = 15000  -- var to time the notification dismissal 15 sec
 
 local IT = _InternalTranslate
 
+-- idea from ShouldProc from workplace.lua
+-- added biome check for turned of domes
+local function CAIvalidateBld(bld)
+	local dome = bld:CheckServicedDome()
+	if dome then
+	  return ValidateBuilding(bld) and bld.ui_working and bld.max_workers > 0 and bld.max_workers and dome.ui_working
+	else
+		return -- short circuit since no nearby dome to live in.
+	end -- if dome
+end -- CAIvalidateBld(building)
+
 -- gather all the open jobs that want specialists
 -- jobtype   : string, optional - gather all the open jobs for any jobtype using jobtype = "thejobtype"
 local function CAIgatherOpenJobs(jobtype)
@@ -52,7 +63,7 @@ local function CAIgatherOpenJobs(jobtype)
 			if not openjobs.counts[jobspec] then openjobs.counts[jobspec] = 0 end -- setup sub-table
 			for i = 1, #workplace do
 				local numopenjobs = 0
-				if ValidateBuilding(workplace[i]) then -- check to make sure building is not destroyed
+				if CAIvalidateBld(workplace[i]) then -- check to make sure building is not destroyed  workplace.ui_working
 				  numopenjobs = numopenjobs + workplace[i]:GetFreeWorkSlots(1)
 				  numopenjobs = numopenjobs + workplace[i]:GetFreeWorkSlots(2)
 				  numopenjobs = numopenjobs + workplace[i]:GetFreeWorkSlots(3)
@@ -131,7 +142,7 @@ end -- CAIcanWorkHere(colonist, workplace)
 local function CAIcanMoveHere(colonist, workplace)
 	local e_dome = workplace.parent_dome or FindNearestObject(UICity.labels.Dome, workplace)
 	local eval   = TraitFilterColonist(e_dome.trait_filter, colonist.traits)
-	if eval >= 0 then
+	if e_dome.accept_colonists and eval >= 0 then
 		return true
 	else
 		return false
@@ -183,7 +194,8 @@ function CAIjobhunt(jobtype)
 						  		if aworkplace ~= "Unemployed" then aworkplace = aworkplace.name ~= "" and aworkplace.name or aworkplace.display_name end
 						  		print(string.format("Applicant %s is moving from %s to %s", IT(applicants[1].name), IT(aworkplace), IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name)))
 						  	end -- if lf_print
-						  	if applicants[1]:CanReachBuilding(employers[i]) then -- if they can walk or get a ride then move
+						  	local avoid_workplace = applicants[1].avoid_workplace or ""
+						  	if avoid_workplace ~= employers[i]  and applicants[1]:CanReachBuilding(employers[i]) then -- if they alowed to take the job, can walk or get a ride then move
 						  	  local a_dome = applicants[1].dome or applicants[1].current_dome or applicants[1]:GetPos() -- current_dome is just in case the colonist is currently moving domes.
 						  	  local e_dome = employers[i].parent_dome or FindNearestObject(UICity.labels.Dome, employers[i])
 						  	  if a_dome == e_dome or IsInWalkingDistDome(a_dome, e_dome) then
@@ -193,13 +205,13 @@ function CAIjobhunt(jobtype)
 						  	  		if lf_print then print(string.format("Applicant %s is staying in home dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
-						  	  	elseif e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) then
+						  	  	elseif e_dome.accept_colonists and e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) then
 						  	  		-- not home but but can migrate
 						  	  		if lf_print then print(string.format("Applicant %s is moving to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	  		applicants[1]:SetForcedDome(e_dome)
-						  	  	elseif e_dome:CanColonistsFromDifferentDomesWorkServiceTrainHere() and a_dome.allow_work_in_connected then
+						  	  	elseif e_dome:CanColonistsFromDifferentDomesWorkServiceTrainHere() and e_dome.accept_colonists and a_dome.allow_work_in_connected then
 						  	  		-- not home dome can commute
 						  	  		if lf_print then print(string.format("Applicant %s is commuting to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
@@ -217,6 +229,10 @@ function CAIjobhunt(jobtype)
 						  	  table.remove(applicants, 1)
 						  	else
 						  		if lf_print then print("Applicant cant reach prospective employer") end
+						  		if #employers == 1 and #applicants > 1 then
+						  			-- remove the applicant if we can try another applicant for this job and its the only job
+						  			table.remove(applicants, 1)
+						  		end -- if #employers == 1
 						  	end -- if applicants[1]:CanReachBuilding(employers[i])
 						  else
 						  	if lf_print then print("No more applicants available for employer: ", IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name)) end
@@ -241,7 +257,7 @@ function CAIjobmigrate()
 	local UICity = UICity
 	local colonists = UICity.labels.Colonist or empty_table
 	local count  = 0
-
+  if lf_print then print("--- Starting CAIjobmigrate check ---") end
 	for i = 1, #colonists do
 		if colonists[i].workplace then
 			local c  = colonists[i]
