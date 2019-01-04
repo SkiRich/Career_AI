@@ -217,7 +217,8 @@ function CAIjobhunt(jobtype)
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	    end -- if a_dome == e_dome
-						  	  elseif a_dome ~= e_dome and e_dome.accept_colonists and IsTransportAvailableBetween(a_dome, e_dome) and CAIcanMoveHere(applicants[1], employers[i]) then
+						  	  elseif a_dome ~= e_dome and e_dome.accept_colonists and
+						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and CAIcanMoveHere(applicants[1], employers[i]) then
 						  	  	-- not home dome must relocate
 						  	  	-- relocate colonist regardless of space if they can get there via shuttle
 						  	  	-- obey dome filters
