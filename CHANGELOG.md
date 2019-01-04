@@ -1,4 +1,17 @@
 # Changelog for Career A.I.
+## version 01/03/2019 8:13:13 PM
+#### Changed
+- CAIjobhunt()
+
+#### Added
+- Added aditional LRTranport check
+
+#### Open Issues
+- suicidal colonists during heavy shuttle work load
+  - two reports
+  - waiting till more folks report issue to add addition options for workload
+
+--------------------------------------------------------
 ## version 01/02/2019 2:19:56 PM
 #### Changed
 - CAIgatherOpenJobs()
