@@ -149,6 +149,39 @@ local function CAIcanMoveHere(colonist, workplace)
 	end -- if eval
 end -- CAIcanMoveHere(colonist, workplace)
 
+-- copy of ShuttleHub:GetGlobalLoad()
+local function ShuttleLoadOK()
+	local UICity = UICity
+  local shuttles = 0
+  local tasks = LRManagerInstance and LRManagerInstance:EstimateTaskCount()
+  if tasks then
+    for _, hub in ipairs(UICity.labels.ShuttleHub or empty_table) do
+      if hub.working or hub.suspended then
+        shuttles = shuttles + #hub.shuttle_infos
+      end
+    end
+  end
+  local shuttle_load
+  if not tasks or shuttles == 0 then
+    shuttle_load = 0
+  elseif tasks < shuttles then
+    shuttle_load = 1
+  elseif tasks < 3 * shuttles then
+    shuttle_load = 2
+  else
+    shuttle_load = 3
+  end
+  if shuttle_load == 1 or shuttle_load == 2 then return true end
+  return false
+end -- ShuttleLoadOK()
+
+-- checks for any sponsor that has no comute penalty
+local function ShouldMigrate()
+	local sponsor = GetMissionSponsor()
+	if sponsor.id == "Brazil" then return false end
+	return true
+end -- ShouldMigrate()
+
 
 -- main function called once daily to move specialists around to better jobs
 -- jobtype   : string, optional - jobhunt for jobtype using jobtype = "thejobtype"
@@ -205,8 +238,8 @@ function CAIjobhunt(jobtype)
 						  	  		if lf_print then print(string.format("Applicant %s is staying in home dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
-						  	  	elseif e_dome.accept_colonists and e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) then
-						  	  		-- not home but but can migrate
+						  	  	elseif ShouldMigrate() and e_dome.accept_colonists and e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) then
+						  	  		-- not home but but can migrate in walking distance
 						  	  		if lf_print then print(string.format("Applicant %s is moving to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
@@ -218,10 +251,12 @@ function CAIjobhunt(jobtype)
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	    end -- if a_dome == e_dome
 						  	  elseif a_dome ~= e_dome and e_dome.accept_colonists and
-						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and CAIcanMoveHere(applicants[1], employers[i]) then
+						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and ShuttleLoadOK() and
+						  	         CAIcanMoveHere(applicants[1], employers[i]) then
 						  	  	-- not home dome must relocate
 						  	  	-- relocate colonist regardless of space if they can get there via shuttle
 						  	  	-- obey dome filters
+						  	  	-- check for LR Transport availability and the workload
 						  	  	if lf_print then print(string.format("Applicant %s is relocating to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  	if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	applicants[1]:SetWorkplace(employers[i], shift)
@@ -394,7 +429,7 @@ function OnMsg.NewHour(hour)
   end -- once a day at 8AM
 
   -- job migrate AI
-  if hour == 22 and g_CAIenabled and (not g_CAIoverride) then
+  if hour == 22 and g_CAIenabled and ShouldMigrate() and (not g_CAIoverride) then
   	CAIjobmigrate()
   end -- once a day at 8AM
 

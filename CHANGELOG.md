@@ -1,5 +1,18 @@
 # Changelog for Career A.I.
-## version 01/03/2019 8:13:13 PM
+## 1.2.0 01/16/2019 10:34:14 PM
+#### Changed
+- CAIjobhunt(jobtype) to check for Brazil and Shuttle Workload
+- NMewHour to check for Brazil
+
+#### Added
+- ShouldMigrate() checks for Brazil
+- ShuttleLoadOK() check for shuttle load of 1 or 2
+
+#### Fixed Issues
+- Suicidal walking colonists
+
+--------------------------------------------------------
+## 1.1.1 01/03/2019 8:13:13 PM
 #### Changed
 - CAIjobhunt()
 
@@ -12,7 +25,7 @@
   - waiting till more folks report issue to add addition options for workload
 
 --------------------------------------------------------
-## version 01/02/2019 2:19:56 PM
+## 1.0.2 01/02/2019 2:19:56 PM
 #### Changed
 - CAIgatherOpenJobs()
 - CAIjobhunt(jobtype)
