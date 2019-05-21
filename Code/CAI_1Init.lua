@@ -321,8 +321,8 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
 		return Old_ChooseWorkplace(unit, workplaces, allow_exchange)
   end -- if disabled
 
-  -- short circuit for colonists working at Sanatoriums and University's
-  if IsKindOfClasses(unit.workplace, "Sanatorium", "MartianUniversity") then
+  -- short circuit for colonists working at Schools(Children ONLY), Sanatoriums and University's
+  if IsKindOfClasses(unit.workplace, "School", "Sanatorium", "MartianUniversity") then
   	if lf_print then print(string.format("***** Colonists %s is at a Sanatorium or MU *****", IT(unit.name))) end
   	return Old_ChooseWorkplace(unit, workplaces, allow_exchange)
   end -- if in Sanatorium

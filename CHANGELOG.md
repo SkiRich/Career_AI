@@ -1,4 +1,16 @@
 # Changelog for Career A.I.
+## V1.2.1 05/21/2019 3:10:14 AM
+#### Changed
+- ChooseWorkplace
+
+#### Added
+- Added School to short circuit.
+  - if IsKindOfClasses(unit.workplace, "School", "Sanatorium", "MartianUniversity") then
+
+#### Fixed Issues
+- Children were being ejected from nursuries when schools where in a different dome.
+
+--------------------------------------------------------
 ## 1.2.0 01/16/2019 10:34:14 PM
 #### Changed
 - CAIjobhunt(jobtype) to check for Brazil and Shuttle Workload
