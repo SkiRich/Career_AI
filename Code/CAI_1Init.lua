@@ -3,12 +3,12 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated May 23rd, 2019
+-- Updated May 24th, 2019
 
 
 local lf_print      = false -- Setup debug printing in local file
 local lf_printDebug = false -- debug ChooseWorkplace
-local lf_watchSpec  = false -- specialist type to watch during debug
+local lf_watchSpec  = "engineer" -- specialist type to watch during debug
                             -- Use if lf_print then print("something") end
                             -- use Msg("ToggleLFPrint", "CAI", "printdebug", "geologist") to toggle
 
@@ -183,6 +183,25 @@ local function ShouldMigrate()
 	return true
 end -- ShouldMigrate()
 
+-- try and reserve a residence before migration
+local function CAIreserveResidence(colonist, dome)
+	if dome:GetFreeLivingSpace() > 0 then
+	  local aptBldgs = (dome.labels and dome.labels.Residence) or empty_table
+	  local aptBldgsWithSpace = {}
+
+	  -- find all the free apts
+	  for i = 1, #aptBldgs do
+	  	if aptBldgs[i]:GetFreeSpace() > 0 then aptBldgsWithSpace[#aptBldgsWithSpace+1] = aptBldgs[i] end
+	  end -- for i
+
+	  -- try and get a reservation
+	  for i = 1, #aptBldgsWithSpace do
+	  	if aptBldgsWithSpace[i]:ReserveResidence(colonist) then	return true end
+	  end -- for i
+
+	end -- if dome:GetFreeLivingSpace()
+	return false -- default no space
+end -- CAIreserveResidence()
 
 -- main function called once daily to move specialists around to better jobs
 -- jobtype   : string, optional - jobhunt for jobtype using jobtype = "thejobtype"
@@ -239,21 +258,21 @@ function CAIjobhunt(jobtype)
 						  	  		if lf_print then print(string.format("Applicant %s is staying in home dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
-						  	  	elseif ShouldMigrate() and e_dome.accept_colonists and e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) then
+						  	  	elseif ShouldMigrate() and a_dome.accept_colonists and e_dome.accept_colonists and e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) and CAIreserveResidence(applicants[1], e_dome) then
 						  	  		-- not home but but can migrate in walking distance
 						  	  		if lf_print then print(string.format("Applicant %s is moving to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	  		applicants[1]:SetForcedDome(e_dome)
-						  	  	elseif e_dome:CanColonistsFromDifferentDomesWorkServiceTrainHere() and e_dome.accept_colonists and a_dome.allow_work_in_connected then
+						  	  	elseif e_dome:CanColonistsFromDifferentDomesWorkServiceTrainHere() and a_dome.accept_colonists and e_dome.accept_colonists and a_dome.allow_work_in_connected then
 						  	  		-- not home dome can commute
 						  	  		if lf_print then print(string.format("Applicant %s is commuting to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	    end -- if a_dome == e_dome
-						  	  elseif a_dome ~= e_dome and e_dome.accept_colonists and
+						  	  elseif a_dome ~= e_dome and a_dome.accept_colonists and e_dome.accept_colonists and
 						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and ShuttleLoadOK() and
-						  	         CAIcanMoveHere(applicants[1], employers[i]) then
+						  	         CAIcanMoveHere(applicants[1], employers[i]) and CAIreserveResidence(applicants[1], e_dome) then
 						  	  	-- not home dome must relocate
 						  	  	-- relocate colonist regardless of space if they can get there via shuttle
 						  	  	-- obey dome filters
@@ -301,7 +320,8 @@ function CAIjobmigrate()
 			local cw = c.workplace
 			local c_dome = c.dome or c.current_dome
 			local cw_dome = cw.parent_dome or FindNearestObject(UICity.labels.Dome, cw)
-			if (not IsKindOfClasses(cw, "School", "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(c, cw) then
+			if (not IsKindOfClasses(cw, "School", "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and
+			   CAIcanMoveHere(c, cw) and CAIreserveResidence(c, cw_dome) then
 				c:SetForcedDome(cw_dome)
 				count = count + 1
 				if lf_print then print(string.format("Colonist %s is moving from %s to %s", IT(c.name), IT(c_dome.name), IT(c.cw_dome.name))) end
