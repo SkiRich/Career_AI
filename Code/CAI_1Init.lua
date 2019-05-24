@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Dec 31th, 2018
+-- Updated May 23rd, 2019
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -22,7 +22,6 @@ local incompatibleMods = {
 	{name = "Better AI",                 id = "1361377883"},
 	{name = "Martian Economy",           id = "1340466409"},
 	{name = "Improved Martian Economy",  id = "1575009362"},
-	--{name = "Mod Config Reborn",    id = "1542863522"}, -- for testing -- remove before upload
 } -- incompatibleMods
 
 GlobalVar("g_CAIenabled", true) -- var to turn on or off CAI
@@ -41,6 +40,7 @@ local function CAIvalidateBld(bld)
 		return -- short circuit since no nearby dome to live in.
 	end -- if dome
 end -- CAIvalidateBld(building)
+
 
 -- gather all the open jobs that want specialists
 -- jobtype   : string, optional - gather all the open jobs for any jobtype using jobtype = "thejobtype"
@@ -85,7 +85,7 @@ end -- CAIgatherOpenJobs()
 
 -- gather colonists with specialities working non-specialty jobs
 -- gather colonists with non-pecialities working in specialty jobs
--- exclude colonists at sanatorium and university (shouldn't have specialists in university anyway)
+-- exclude colonists at school, sanatorium and university (shouldn't have specialists in university anyway)
 -- exclude children and seniors that cannot work
 -- jobtype   : string, optional - gather all the colonists for any jobtype using jobtype = "thejobtype"
 local function CAIgatherColonists(jobtype)
@@ -95,12 +95,11 @@ local function CAIgatherColonists(jobtype)
 	for i = 1, #colonists do
 		local c = colonists[i]
 		if ((jobtype and c.specialist and c.specialist == jobtype) or ((not jobtype) and c.specialist and c.specialist ~= "none")) and c:CanWork() and
-		   (not IsKindOf(c.workplace, "Sanatorium")) and
-		   (not IsKindOf(c.workplace, "MartianUniversity")) and
+		   (not IsKindOfClasses(c.workplace, "School", "Sanatorium", "MartianUniversity")) and
 		   ((not c.workplace) or (c.workplace and c.workplace.specialist ~= c.specialist)) then
 			-- colonist is a specialist
 			-- colonist can work see Colonist:CanWork()
-			-- is not in a sanatorium or MU
+			-- is not in a school, sanatorium or MU
 			-- jobless gets priority then specialists working in the wrong specialty
 			if not jobhunters[c.specialist] then jobhunters[c.specialist] = {} end -- create sub-table
 			table.insert(jobhunters[c.specialist], c)
@@ -139,10 +138,12 @@ end -- CAIcanWorkHere(colonist, workplace)
 
 
 -- determine if colonist can move into dome with dome filters
+-- determine if colonist is quarantined ini their current dome
 local function CAIcanMoveHere(colonist, workplace)
-	local e_dome = workplace.parent_dome or FindNearestObject(UICity.labels.Dome, workplace)
-	local eval   = TraitFilterColonist(e_dome.trait_filter, colonist.traits)
-	if e_dome.accept_colonists and eval >= 0 then
+	local e_dome        = workplace.parent_dome or FindNearestObject(UICity.labels.Dome, workplace)
+	local c_canMove     = colonist.dome and colonist.dome.accept_colonists
+	local eval          = TraitFilterColonist(e_dome.trait_filter, colonist.traits)
+	if c_canMove and e_dome.accept_colonists and eval >= 0 then
 		return true
 	else
 		return false
@@ -300,7 +301,7 @@ function CAIjobmigrate()
 			local cw = c.workplace
 			local c_dome = c.dome or c.current_dome
 			local cw_dome = cw.parent_dome or FindNearestObject(UICity.labels.Dome, cw)
-			if (not IsKindOfClasses(cw, "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(c, cw) then
+			if (not IsKindOfClasses(cw, "School", "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(c, cw) then
 				c:SetForcedDome(cw_dome)
 				count = count + 1
 				if lf_print then print(string.format("Colonist %s is moving from %s to %s", IT(c.name), IT(c_dome.name), IT(c.cw_dome.name))) end
@@ -323,7 +324,7 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
 
   -- short circuit for colonists working at Schools(Children ONLY), Sanatoriums and University's
   if IsKindOfClasses(unit.workplace, "School", "Sanatorium", "MartianUniversity") then
-  	if lf_print then print(string.format("***** Colonists %s is at a Sanatorium or MU *****", IT(unit.name))) end
+  	if lf_print then print(string.format("***** Colonists %s is at a School, Sanatorium or MU *****", IT(unit.name))) end
   	return Old_ChooseWorkplace(unit, workplaces, allow_exchange)
   end -- if in Sanatorium
 
