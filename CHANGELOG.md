@@ -1,4 +1,17 @@
 # Changelog for Career A.I.
+## v1.4.0 05/24/2019 3:11:45 AM
+#### Changed
+- default lf_watchSpec
+- CAIjobhunt(jobtype)
+- CAIjobmigrate()
+
+#### Added
+- local function CAIreserveResidence(colonist, dome)
+
+#### Fixed Issues
+- homeless colonists due to migration without reservation.  Added reservation function.
+
+--------------------------------------------------------
 ## v1.3.0 05/23/2019 6:59:15 PM
 #### Changed
 - CAIcanMoveHere(colonist, workplace)
