@@ -1,4 +1,25 @@
 # Changelog for Career A.I.
+## v1.3.0 05/23/2019 6:59:15 PM
+#### Changed
+- CAIcanMoveHere(colonist, workplace)
+  - added code to not move colonist if in a quarantined dome
+
+#### Added
+- Added School to the IsKind of Classes function for migrate and job hunt
+
+#### Removed
+
+#### Fixed Issues
+- Children were being ejected from nursuries when schools where in a different dome.
+- Moving colonists did not respect quarantined domes
+
+#### Open Issues
+
+#### Deprecated
+
+#### Todo
+
+--------------------------------------------------------
 ## V1.2.1 05/21/2019 3:10:14 AM
 #### Changed
 - ChooseWorkplace
