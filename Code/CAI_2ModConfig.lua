@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Dec 29th, 2018
+-- Updated June 4th, 2019
 
 local lf_print = false -- Setup debug printing in local file
 
@@ -24,7 +24,7 @@ function OnMsg.ModConfigReady()
     -- Register this mod's name and description
     ModConfig:RegisterMod("CAI", -- ID
         T{StringIdBase, "Career A.I."}, -- Optional display name, defaults to ID
-        T{StringIdBase + 1, "Options for Automated Tradepad"} -- Optional description
+        T{StringIdBase + 1, "Options for Career A.I."} -- Optional description
     )
 
     ModConfig:RegisterOption("CAI", "CAIenabled", {

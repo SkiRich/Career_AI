@@ -1,4 +1,18 @@
 # Changelog for Career A.I.
+## v1.5.0 06/04/2019 6:25:11 PM
+#### Changed
+- Various syntax changes to code.
+- function CAIcanMoveHere(colonist, workplace, dDome)
+  - can now pass dome or workplace as test.
+
+#### Added
+- function CAIcanReserveResInConnnectedDome(colonist, e_dome)
+  - try and reserve a residence before migration check in a connected dome
+
+#### Fixed Issues
+- Colonists never reserved residences in connecting domes using jobhunting ai.  Now they can as a last resort.
+
+--------------------------------------------------------
 ## v1.4.0 05/24/2019 3:11:45 AM
 #### Changed
 - default lf_watchSpec
