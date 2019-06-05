@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated May 24th, 2019
+-- Updated June 4th, 2019
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -25,6 +25,7 @@ local incompatibleMods = {
 } -- incompatibleMods
 
 GlobalVar("g_CAIenabled", true) -- var to turn on or off CAI
+
 g_CAIoverride          = false  -- var to override CAI if incompatible mods detected
 g_CAInoticeDismissTime = 15000  -- var to time the notification dismissal 15 seconds
 
@@ -138,12 +139,12 @@ end -- CAIcanWorkHere(colonist, workplace)
 
 
 -- determine if colonist can move into dome with dome filters
--- determine if colonist is quarantined ini their current dome
-local function CAIcanMoveHere(colonist, workplace)
-	local e_dome        = workplace.parent_dome or FindNearestObject(UICity.labels.Dome, workplace)
+-- determine if colonist is quarantined in their current dome
+local function CAIcanMoveHere(colonist, workplace, dDome)
+	local d_dome        = dDome or workplace.parent_dome or FindNearestObject(UICity.labels.Dome, workplace)
 	local c_canMove     = colonist.dome and colonist.dome.accept_colonists
-	local eval          = TraitFilterColonist(e_dome.trait_filter, colonist.traits)
-	if c_canMove and e_dome.accept_colonists and eval >= 0 then
+	local eval          = TraitFilterColonist(d_dome.trait_filter, colonist.traits)
+	if c_canMove and d_dome.accept_colonists and eval >= 0 then
 		return true
 	else
 		return false
@@ -203,6 +204,35 @@ local function CAIreserveResidence(colonist, dome)
 	return false -- default no space
 end -- CAIreserveResidence()
 
+-- try and reserve a residence before migration check in a connected dome
+-- check conected domes if can move there and return the largest spaced one
+local function CAIcanReserveResInConnnectedDome(colonist, e_dome)
+	local haveSpace = false
+	if not e_dome then return false, false end -- short circuit if empty
+	local connectedDomes = e_dome:GetConnectedDomes()
+	local connectedDomesSpace = {}
+	local largestSpaceDome = {}
+	for dome, result in pairs(connectedDomes) do
+		-- load up table with domes that have space
+		if result and (dome:GetFreeLivingSpace() > 0) and CAIcanMoveHere(colonist, nil, dome) then
+			connectedDomesSpace[dome] = dome:GetFreeLivingSpace()
+			haveSpace = true
+			if #largestSpaceDome == 0 then
+				largestSpaceDome[1] = dome
+				largestSpaceDome[2] = connectedDomesSpace[dome]
+			elseif connectedDomesSpace[dome] > largestSpaceDome[2] then
+				largestSpaceDome[1] = dome
+				largestSpaceDome[2] = connectedDomesSpace[dome]
+			end -- if #largestSpaceDome
+		end -- if result
+	end -- for dome, result
+	--ex(connectedDomesSpace)
+	--ex(largestSpaceDome)
+	--ex((#largestSpaceDome > 0 and largestSpaceDome[1]) or {})
+	return haveSpace, (#largestSpaceDome > 0 and largestSpaceDome[1]) or {}
+end -- CAIreserveResInConnnectedDome()
+
+
 -- main function called once daily to move specialists around to better jobs
 -- jobtype   : string, optional - jobhunt for jobtype using jobtype = "thejobtype"
 function CAIjobhunt(jobtype)
@@ -251,6 +281,7 @@ function CAIjobhunt(jobtype)
 						  	if avoid_workplace ~= employers[i]  and applicants[1]:CanReachBuilding(employers[i]) then -- if they alowed to take the job, can walk or get a ride then move
 						  	  local a_dome = applicants[1].dome or applicants[1].current_dome or applicants[1]:GetPos() -- current_dome is just in case the colonist is currently moving domes.
 						  	  local e_dome = employers[i].parent_dome or FindNearestObject(UICity.labels.Dome, employers[i])
+						  	  ----- This section is for local domes in walking distance -----
 						  	  if a_dome == e_dome or IsInWalkingDistDome(a_dome, e_dome) then
 						  	  	-- if applicant can get to the job, then set it right away
 						  	  	if a_dome == e_dome then
@@ -270,17 +301,29 @@ function CAIjobhunt(jobtype)
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	    end -- if a_dome == e_dome
+						  	    ----- This section is if they can migrate with LRTransport and live in same dome -----
 						  	  elseif a_dome ~= e_dome and a_dome.accept_colonists and e_dome.accept_colonists and
 						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and ShuttleLoadOK() and
 						  	         CAIcanMoveHere(applicants[1], employers[i]) and CAIreserveResidence(applicants[1], e_dome) then
 						  	  	-- not home dome must relocate
-						  	  	-- relocate colonist regardless of space if they can get there via shuttle
+						  	  	-- relocate colonist and consider space for home
 						  	  	-- obey dome filters
 						  	  	-- check for LR Transport availability and the workload
 						  	  	if lf_print then print(string.format("Applicant %s is relocating to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  	if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	applicants[1]:SetWorkplace(employers[i], shift)
 						  	  	applicants[1]:SetForcedDome(e_dome)
+						  	  	----- This section is if they can migrate with LRTransport and live in connected dome -----
+						  	  elseif a_dome ~= e_dome and a_dome.accept_colonists and e_dome.accept_colonists and
+						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and ShuttleLoadOK() and
+						  	         CAIcanMoveHere(applicants[1], employers[i]) then
+						  	         	-- check conected domes if can move there and return the largest spaced one
+						  	         	local hasSpace, targetDome = CAIcanReserveResInConnnectedDome(applicants[1], e_dome)
+						  	         	if hasSpace and CAIreserveResidence(applicants[1], targetDome) then
+						  	         		if lf_print then print("Test Connecting Dome migration Function operating") end
+						  	  	        applicants[1]:SetWorkplace(employers[i], shift)
+						  	  	        applicants[1]:SetForcedDome(targetDome)
+						  	         	end -- if hasSpace
 						  	  end --  if a_dome == e_dome or IsInWalkingDist
 						  	  table.remove(applicants, 1)
 						  	else
@@ -322,9 +365,9 @@ function CAIjobmigrate()
 			local cw_dome = cw.parent_dome or FindNearestObject(UICity.labels.Dome, cw)
 			if (not IsKindOfClasses(cw, "School", "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and
 			   CAIcanMoveHere(c, cw) and CAIreserveResidence(c, cw_dome) then
-				c:SetForcedDome(cw_dome)
-				count = count + 1
-				if lf_print then print(string.format("Colonist %s is moving from %s to %s", IT(c.name), IT(c_dome.name), IT(c.cw_dome.name))) end
+				  c:SetForcedDome(cw_dome)
+				  count = count + 1
+				  if lf_print then print(string.format("Colonist %s is moving from %s to %s", IT(c.name), IT(c_dome.name), IT(c.cw_dome.name))) end
 			end -- if c_dome ~= cw_dome
 		end -- if
 	end -- for i
@@ -454,7 +497,7 @@ function OnMsg.NewHour(hour)
   	CAIjobmigrate()
   end -- once a day at 8AM
 
-end -- OnMsg.LoadGame()
+end -- OnMsg.NewHour(hour)
 
 function OnMsg.ToggleLFPrint(modname, lfvar, jobtype)
 	-- use Msg("ToggleLFPrint", "CAI", "printdebug") to toggle
