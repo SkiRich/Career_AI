@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated June 4th, 2019
+-- Updated June 8th, 2019
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -391,47 +391,69 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   	return Old_ChooseWorkplace(unit, workplaces, allow_exchange)
   end -- if in Sanatorium
 
-  local sworkplaces = {}
+  local sworkplaces  = {} -- specialist workplaces
+  local nsworkplaces = {} -- non-specialist workplaces
   local specialist = unit.specialist or "none"
 
   for i = 1, #workplaces do
-  	if workplaces[i].specialist and workplaces[i].specialist == specialist then sworkplaces[#sworkplaces+1] = workplaces[i] end
+  	if workplaces[i].specialist and workplaces[i].specialist == specialist then
+  		sworkplaces[#sworkplaces+1] = workplaces[i]
+  	elseif (not workplaces[i].specialist) or workplaces[i].specialist == "none" then
+  		nsworkplaces[#nsworkplaces+1] = workplaces[i]
+  	end -- if workplaces[i]
   end -- for i
 
   if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
   	local unit_dome = unit.dome or unit.current_dome or "Unknown"
-  	print("--------------------- ChooseWorkplace -----------------------")
+  	print("-------------------------- ChooseWorkplace ----------------------------")
   	print(string.format("Specialist: %s - %s from %s", specialist, IT(unit.name), IT(unit_dome.name or unit_dome)))
   	print("Eligible specialist workplaces: ", #sworkplaces)
+  	print("Eligible non-specialist workplaces: ", #nsworkplaces)
   end -- if lf_printDebug
 
   local best_bld, best_shift, best_to_kick, best_specialist_match
 
-  if #sworkplaces > 0 then
+  -- lets try and put people where they work best
+  if (specialist ~= "none") and (#sworkplaces > 0) then
+  	-- we got specialist workplaces and a specialist go find a spot and kick out non specs
+  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("++ Specialist can find spec work") end
   	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, sworkplaces, true) -- true here to kick out non specs
-  end -- if #sworkplaces
+  elseif (specialist ~= "none") and (#sworkplaces == 0) then
+  	-- we got a specialist but no specialist specific workplaces just use the regular function but dont kick out anyone
+  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("-- Specialist has NO spec work") end
+  	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, false) -- false here to not kickout non specs, find a job you bum
+  elseif (specialist == "none") and (#nsworkplaces > 0) then
+  	-- we got a non-specialist so find non-specialist work first dont kick anyone out.
+  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("++ NON Specialist can find work") end
+  	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, nsworkplaces, false) -- false here to not kickout anyone, find a job you bum
+  end -- if (specialist ~= "none") and (#sworkplaces > 0)
 
   if best_bld and best_shift then
-    -- if we got specialist work and we can get there, then return that work
+    -- if we got proper work and we can get there, then return that work
   	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
   		local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UICity.labels.Dome, best_bld))
   	  print("Best Bld: ", (best_bld and IT(best_bld.name ~= "" and best_bld.name or best_bld.display_name)), " located at: ", IT(best_bld_dome.name))
   	  print("Best Shift: ", best_shift)
   	  print(string.format("Best Kick: %s - %s", (best_to_kick and IT(best_to_kick.name) or ""), (best_to_kick and best_to_kick.specialist or "")  ))
   	  print("Best Spec Match: ", best_specialist_match)
-  	  print("-----------------------------------------------------------")
+  	  print("---------------------------------------------------------------------")
   	end -- if lf_printDebug
   else
-  	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, allow_exchange) -- use default and prevent job hopping.
+  	-- we got no work so lets just ask anyway, but dont kick anyone out to prevent job hopping
+  	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, false) -- use default and prevent job hopping.
     if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
     	local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UICity.labels.Dome, best_bld))
-    	print("-+++++= Default ChooseWorkplace in Effect =+++++-")
-    	print("Eligible workplaces: ", #workplaces)
+    	print("===========================================================")
+    	print("------+++++= Default ChooseWorkplace in Effect =+++++------")
+    	print("===========================================================")
+    	print("Workplaces with jobs : ", #workplaces)
+    	print("Specialist Workplaces: ", #sworkplaces)
+    	print("Non-Spec Workplaces  : ", #nsworkplaces)
   	  print("Best Bld: ", (best_bld and IT(best_bld.name ~= "" and best_bld.name or best_bld.display_name)), " located at: ", best_bld_dome and IT(best_bld_dome.name))
   	  print("Best Shift: ", best_shift)
   	  print(string.format("Best Kick: %s - %s", (best_to_kick and IT(best_to_kick.name) or ""), (best_to_kick and best_to_kick.specialist or "")  ))
   	  print("Best Spec Match: ", best_specialist_match)
-  	  print("----------------------------------------------")
+  	  print("-----------------------------------------------------------")
     end -- if lf_printDebug
   end -- if best_bld and best_shift
 

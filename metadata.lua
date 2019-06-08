@@ -1,8 +1,8 @@
 return PlaceObj('ModDef', {
 	'title', "Career A.I.",
-	'description', "Career A.I.\nv1.5.0 June 4th, 2019\nby SkiRich",
+	'description', "Career A.I.\nv1.6.0 June 8th, 2019\nby SkiRich",
 	'image', "CareerAILogo.png",
-	'last_changes', "v1.5.0 June 4th, 2019",
+	'last_changes', "v1.6.0 June 8th, 2019",
 	'ignore_files', {
 		"*.git/*",
 		"*.svn/*",
@@ -14,14 +14,14 @@ return PlaceObj('ModDef', {
 	'pops_desktop_uuid', "5078b6ce-3d7b-4ffd-9a3f-66c8b4b63d4c",
 	'pops_any_uuid', "3d7603a5-7498-4bfb-b964-e12bfca34e3a",
 	'author', "SkiRich",
-	'version', 23,
+	'version', 25,
 	'lua_revision', 233360,
 	'saved_with_revision', 245618,
 	'code', {
 		"Code/CAI_1Init.lua",
 		"Code/CAI_2ModConfig.lua",
 	},
-	'saved', 1559696840,
+	'saved', 1560021940,
 	'screenshot1', "Images/CareerAILogo.png",
 	'screenshot2', "Images/CAINotice.png",
 	'screenshot3', "Images/CAIModConfig.png",
