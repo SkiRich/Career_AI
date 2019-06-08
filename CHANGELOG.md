@@ -1,4 +1,17 @@
 # Changelog for Career A.I.
+## v1.6.0 06/08/2019 2:45:59 PM
+#### Changed
+- ChooseWorkplace()
+
+#### Added
+- added code to do the following more effectively
+  - specialists take specialist jobs first then non-specialist work
+  - non-specialists take non-specialists jobs first then any job
+
+#### Fixed Issues
+- optimized colonist ChooseWorkPlace() job selection process
+
+--------------------------------------------------------
 ## v1.5.0 06/04/2019 6:25:11 PM
 #### Changed
 - Various syntax changes to code.
