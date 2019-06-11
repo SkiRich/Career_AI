@@ -8,13 +8,14 @@
 
 local lf_print      = false -- Setup debug printing in local file
 local lf_printDebug = false -- debug ChooseWorkplace
+local lf_printRules = false -- debug Rules check
 local lf_watchSpec  = "engineer" -- specialist type to watch during debug
                             -- Use if lf_print then print("something") end
                             -- use Msg("ToggleLFPrint", "CAI", "printdebug", "geologist") to toggle
 
 local ModDir = CurrentModPath
 local iconCIAnotice = ModDir.."UI/Icons/CareerAINotice.png"
-local StringIdBase = 17764701500 -- Career AI  : 701500 - 701599 this file: 50-99 Next: 50
+local StringIdBase = 17764701500 -- Career AI  : 701500 - 701599 this file: 50-99 Next: 57
 
 local incompatibleMods = {
 	{name = "Smarter Migration AI",      id = "1343552210"},
@@ -24,10 +25,13 @@ local incompatibleMods = {
 	{name = "Improved Martian Economy",  id = "1575009362"},
 } -- incompatibleMods
 
-GlobalVar("g_CAIenabled", true) -- var to turn on or off CAI
+GlobalVar("g_CAIenabled", true)      -- var to turn on or off CAI
+GlobalVar("g_CAIamateurCheck", true) -- var to check whether to bug or not anymore
+GlobalVar("g_CAIminSpecialists", 20) -- the minimum number of specialists to wait when playing Amateur rule.
 
 g_CAIoverride          = false  -- var to override CAI if incompatible mods detected
 g_CAInoticeDismissTime = 15000  -- var to time the notification dismissal 15 seconds
+
 
 local IT = _InternalTranslate
 
@@ -462,6 +466,59 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
 
 end -- ChooseWorkplace(unit, workplaces, allow_exchange)
 
+local function CAIamateurPopup()
+    CreateRealTimeThread(function()
+        local params = {
+            title = T{StringIdBase, "Career A.I."},
+             text = "",
+            choice1 = T{StringIdBase + 58, "Ok"},
+            image = "UI/Messages/hints.tga",
+            start_minimized = false,
+        } -- params
+
+        local texts = {
+        	T(StringIdBase + 55, "<em>Career A.I. settings overridden and it has been turned off.</em>"),
+        	T(StringIdBase + 56, "Career A.I. has detected the Game Rule - Amateurs - is active."),
+        	T(StringIdBase + 57, "Career A.I. will reactivate when you have the minimum amount of specialists as set in Mod Config Reborn, or the default of 20 if you do not have Mod Config Reborn."),
+          T(StringIdBase + 58, "Career A.I. will check once every sol for specialists."),
+        }
+        params.text = table.concat(texts, "<newline>")
+        local choice = WaitPopupNotification(false, params)
+    end ) -- CreateRealTimeThread
+end -- function end
+
+
+-- check for the right conditions to start CAI if playing Amateurs
+function CAIcheckAmateurs(gamestart)
+	-- short circuit if not playing Amateurs
+	if not g_CurrentMissionParams.idGameRules["Amateurs"] then return end
+
+	-- short circuit if we are done checking for this condition in later game
+	if not g_CAIamateurCheck then return end
+
+	if lf_printRules then print("**** Running CAIcheckAmateurs() since playing Amateurs ****") end
+
+	-- gather specialists
+	local colonists   = UICity.labels.Colonist or empty_table
+	local numSpecialists = 0
+	for i = 1, #colonists do
+		if colonists[i].specialist and colonists[i].specialist ~= "none" then numSpecialists = numSpecialists + 1 end
+	end -- for i
+
+	if lf_printRules then print ("Number of specialists: ", numSpecialists) end
+
+	if numSpecialists <= g_CAIminSpecialists then
+		if lf_printRules then print("**** #### Not enough specialists to enable CAI #### ****") end
+		if gamestart then CAIamateurPopup() end
+		ModConfig:Set("CAI", "CAIenabled", false)
+	else
+		if lf_printRules then print("**** #### There is enough specialists - disabling check, enabling CAI #### ****") end
+    g_CAIamateurCheck = false
+    ModConfig:Set("CAI", "CAIenabled", true)
+	end -- if numSpecialists
+
+end -- CAIcheckAmateurs()
+
 
 -- incompatible mod check
 function CAIincompatibeModCheck()
@@ -501,7 +558,6 @@ function CAIincompatibeModCheck()
 end -- function end
 
 ---------------------------------------------- OnMsgs -----------------------------------------------
-
 
 function OnMsg.NewHour(hour)
 	-- specialists jobhunt

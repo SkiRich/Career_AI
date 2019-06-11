@@ -27,12 +27,25 @@ function OnMsg.ModConfigReady()
         T{StringIdBase + 1, "Options for Career A.I."} -- Optional description
     )
 
+    -- g_CAIenabled
     ModConfig:RegisterOption("CAI", "CAIenabled", {
         name = T{StringIdBase + 2, "Enable Career A.I.: "},
         desc = T{StringIdBase + 3, "Enable Career A.I. or Disable and use in game workplace A.I"},
         type = "boolean",
         default = true,
         order = 1
+    })
+
+    -- g_CAIminSpecialists
+    ModConfig:RegisterOption("CAI", "CAIminSpecialists", {
+        name = T{StringIdBase + 6, "Auto dismiss notification time in seconds:"},
+        desc = T{StringIdBase + 7, "The number of seconds to keep notifications on screen before dismissing."},
+        type = "number",
+        default = 20,
+        min = 1,
+        max = 200,
+        step = 1,
+        order = 2
     })
 
 end -- ModConfigReady
@@ -54,7 +67,12 @@ function OnMsg.ModConfigChanged(mod_id, option_id, value, old_value, token)
 	    end -- if g_CAIenabled
 	    AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime})
 	    PlayFX("UINotificationResearchComplete")
-  	end -- if option_id
+  	end -- if g_CAIenabled
+
+    -- g_CAIminSpecialists
+    if option_id == "CAIminSpecialists" then
+    	g_CAIminSpecialists = value
+    end -- if g_CAIminSpecialists
 
   end -- if g_ModConfigLoaded
 end -- OnMsg.ModConfigChanged
@@ -65,7 +83,14 @@ function OnMsg.CityStart()
 	if g_ModConfigLoaded then
 		local CAIenabled = ModConfig:Get("CAI", "CAIenabled")
 		if g_CAIenabled ~= CAIenabled then ModConfig:Set("CAI", "CAIenabled", g_CAIenabled, "reset") end
+
+		local CAIminSpecialists = ModConfig:Get("CAI", "CAIminSpecialists")
+
 	end -- if g_ModConfigLoaded
+
+  -- if playing Amateurs rule make sure we check to suspend CAI
+	CAIcheckAmateurs(true)
+
 end -- OnMsg.CityStart()
 
 function OnMsg.NewMapLoaded()
@@ -83,6 +108,7 @@ end -- OnMsg.NewMapLoaded()
 
 function OnMsg.LoadGame()
 	CAIincompatibeModCheck()
+	CAIcheckAmateurs(false)
 	-- load up defaults
 	if g_ModConfigLoaded then
 		local CAIenabled = ModConfig:Get("CAI", "CAIenabled")
@@ -98,6 +124,10 @@ function OnMsg.LoadGame()
 	AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime})
 	PlayFX("UINotificationResearchComplete")
 end -- OnMsg.LoadGame()
+
+function OnMsg.NewDay(day)
+	CAIcheckAmateurs(false)
+end -- OnMsg.NewDay()
 
 
 local function SRDailyPopup()

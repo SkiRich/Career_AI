@@ -1,4 +1,15 @@
 # Changelog for Career A.I.
+## v1.7.0 06/08/2019 9:56:41 PM
+
+#### Added
+- function CAIcheckAmateurs(gamestart)
+- OnMsg.NewDay()
+- Mod config Options
+
+#### Fixed Issues
+- Turns off CAI until 20 specialists are in colony when playing Amateurs game rules
+
+--------------------------------------------------------
 ## v1.6.0 06/08/2019 2:45:59 PM
 #### Changed
 - ChooseWorkplace()
