@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated June 8th, 2019
+-- Updated Feb 2nd, 2020
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -483,6 +483,7 @@ local function CAIamateurPopup()
           T(StringIdBase + 58, "Career A.I. will check once every sol for specialists."),
         }
         params.text = table.concat(texts, "<newline>")
+        Sleep(15000) -- add 10 second delay to allow for the map load to prevent issue with lockup
         local choice = WaitPopupNotification(false, params)
     end ) -- CreateRealTimeThread
 end -- function end
