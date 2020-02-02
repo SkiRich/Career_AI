@@ -1,4 +1,15 @@
 # Changelog for Career A.I.
+## v1.7.1 02/02/2020 1:06:11 AM
+#### Changed
+- CAIamateurPopup()
+
+#### Added
+- Aded 15 second delay to thread that warns about amateur rule at start of game
+
+#### Fixed Issues
+- Game hang when amateur rule is in effect
+
+--------------------------------------------------------
 ## v1.7.0 06/08/2019 9:56:41 PM
 
 #### Added
