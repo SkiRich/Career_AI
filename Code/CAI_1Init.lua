@@ -367,7 +367,7 @@ function CAIjobmigrate()
 			local cw = c.workplace
 			local c_dome = c.dome or c.current_dome
 			local cw_dome = cw.parent_dome or FindNearestObject(UICity.labels.Dome, cw)
-			if (not IsKindOfClasses(cw, "School", "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and
+			if cw and c_dome and cw_dome and (not IsKindOfClasses(cw, "School", "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and
 			   CAIcanMoveHere(c, cw) and CAIreserveResidence(c, cw_dome) then
 				  c:SetForcedDome(cw_dome)
 				  count = count + 1
