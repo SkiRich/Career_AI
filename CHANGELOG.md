@@ -1,3 +1,11 @@
+## version 09/24/2020 6:42:15 PM
+#### Changed
+- Line 370
+
+#### Fixed Issues
+- Line 370 added check for nil for colonist workplaces.  Possible issue when no workplace is presented.
+
+--------------------------------------------------------
 # Changelog for Career A.I.
 ## v1.7.1 02/02/2020 1:06:11 AM
 #### Changed
