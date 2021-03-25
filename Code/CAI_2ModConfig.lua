@@ -3,11 +3,12 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated June 8th, 2019
+-- Updated March 24th, 2021
 
 local lf_print = false -- Setup debug printing in local file
 
-local StringIdBase = 17764701500 -- Career AI  : 701500 - 701599 this file: 1-49 Next: 6
+local StringIdBase = 17764701500 -- Career AI  : 701500 - 701599 this file: 1-49 Next: 7
+-- using 17764701506 in items.lua
 
 local steam_id = "1606337956"
 local mod_name = "Career A.I"
@@ -18,7 +19,27 @@ local iconCIAnotice = ModDir.."UI/Icons/CareerAINotice.png"
 local ModConfig_id = "1542863522" -- Reborn
 local ModConfigWaitThread = false
 g_ModConfigLoaded = false
+---------------------------------------------------------------------------------------------
 
+-- fired when settings are changed/init
+local function ModOptions()
+	g_CAIenabled = CurrentModOptions:GetProperty("EnableMod")
+	ModConfig:Set("CAI", "CAIenabled", g_CAIenabled, "reset")
+end -- function ModOptions()
+
+-- load default/saved settings
+OnMsg.ModsReloaded = ModOptions
+
+-- fired when Mod Options>Apply button is clicked
+function OnMsg.ApplyModOptions(id)
+	if id == CurrentModId then
+		ModOptions()
+	end
+end -- OnMsg.ApplyModOptions(id)
+
+
+
+---------------------------------------------------------------------------------------------
 function OnMsg.ModConfigReady()
 
     -- Register this mod's name and description
@@ -56,6 +77,8 @@ function OnMsg.ModConfigChanged(mod_id, option_id, value, old_value, token)
   	-- g_CAIenabled
   	if option_id == "CAIenabled" then
   		g_CAIenabled = value
+  		-- add in Mod Options
+  		CurrentModOptions:SetProperty("EnableMod", value)
 
   		CAIincompatibeModCheck()
 
@@ -82,7 +105,11 @@ function OnMsg.CityStart()
 	-- load up defaults
 	if g_ModConfigLoaded then
 		local CAIenabled = ModConfig:Get("CAI", "CAIenabled")
-		if g_CAIenabled ~= CAIenabled then ModConfig:Set("CAI", "CAIenabled", g_CAIenabled, "reset") end
+		if g_CAIenabled ~= CAIenabled then
+			ModConfig:Set("CAI", "CAIenabled", g_CAIenabled, "reset")
+			CurrentModOptions:SetProperty("EnableMod", true) -- Mod Option
+		end -- if g_CAIenabled
+		-- Mod Options not needed here since default is true
 
 		local CAIminSpecialists = ModConfig:Get("CAI", "CAIminSpecialists")
 
@@ -112,7 +139,13 @@ function OnMsg.LoadGame()
 	-- load up defaults
 	if g_ModConfigLoaded then
 		local CAIenabled = ModConfig:Get("CAI", "CAIenabled")
-		if g_CAIenabled ~= CAIenabled then ModConfig:Set("CAI", "CAIenabled", g_CAIenabled, "reset") end
+		if g_CAIenabled ~= CAIenabled then
+			ModConfig:Set("CAI", "CAIenabled", g_CAIenabled, "reset")
+			CurrentModOptions:SetProperty("EnableMod", g_CAIenabled) -- Mod Option
+		end -- if g_CAIenabled ~= CAIenabled
+	else
+		-- if they dont use mod config reborn
+		CurrentModOptions:SetProperty("EnableMod", g_CAIenabled) -- Mod Option
 	end -- if g_ModConfigLoaded
 
 	local msgCIA = ""

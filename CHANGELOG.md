@@ -1,4 +1,17 @@
-## version 09/24/2020 6:42:15 PM
+# Changelog for Career A.I.
+## v1.7.3 03/24/2021 11:50:27 PM
+#### Changed
+- function CAIreserveResidence - updated for the new exclusive mechanic
+- CAIjobmigrate() - added aditional checks for workplace = false
+
+##### Added
+- Mod Options and tied it to Mod Config Reborn
+
+#### Fixed Issues
+- dumb lf_print syntax issue with indexs
+
+--------------------------------------------------------
+## 1.7.2 09/24/2020 6:42:15 PM
 #### Changed
 - Line 370
 

@@ -1,8 +1,8 @@
 return PlaceObj('ModDef', {
 	'title', "Career A.I.",
-	'description', "Career A.I.\nv1.7.2 Sept 24th, 2020\nby SkiRich",
+	'description', "Career A.I.\nv1.7.3 March 24th, 2021\nby SkiRich",
 	'image', "CareerAILogo.png",
-	'last_changes', "v1.7.2 Sept 24th, 2020",
+	'last_changes', "v1.7.3 March 24th, 2021",
 	'ignore_files', {
 		"*.git/*",
 		"*.svn/*",
@@ -21,6 +21,7 @@ return PlaceObj('ModDef', {
 		"Code/CAI_1Init.lua",
 		"Code/CAI_2ModConfig.lua",
 	},
+	'has_options', true,
 	'saved', 1600997552,
 	'screenshot1', "Images/CareerAILogo.png",
 	'screenshot2', "Images/CAINotice.png",
