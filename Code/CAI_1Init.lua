@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Feb 2nd, 2020
+-- Updated March 24th, 2021
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -189,6 +189,7 @@ local function ShouldMigrate()
 end -- ShouldMigrate()
 
 -- try and reserve a residence before migration
+-- altered for Tito
 local function CAIreserveResidence(colonist, dome)
 	if dome:GetFreeLivingSpace() > 0 then
 	  local aptBldgs = (dome.labels and dome.labels.Residence) or empty_table
@@ -196,7 +197,16 @@ local function CAIreserveResidence(colonist, dome)
 
 	  -- find all the free apts
 	  for i = 1, #aptBldgs do
-	  	if aptBldgs[i]:GetFreeSpace() > 0 then aptBldgsWithSpace[#aptBldgsWithSpace+1] = aptBldgs[i] end
+	  	-- test for exclusivity compatibility for new Tito mechanic
+	  	if aptBldgs[i].exclusive_trait then
+	  		for trait in pairs(colonist.traits) do
+	  			if trait == aptBldgs[i].exclusive_trait and aptBldgs[i]:GetFreeSpace() > 0 then aptBldgsWithSpace[#aptBldgsWithSpace+1] = aptBldgs[i] end
+	  		end -- for trait
+	  	elseif aptBldgs[i]:GetFreeSpace() > 0 then
+	  		aptBldgsWithSpace[#aptBldgsWithSpace+1] = aptBldgs[i]
+	  	end --if aptBldgs[i].exclusive_trait
+	  	-- original code pre Tito
+	  	-- if aptBldgs[i]:GetFreeSpace() > 0 then aptBldgsWithSpace[#aptBldgsWithSpace+1] = aptBldgs[i] end
 	  end -- for i
 
 	  -- try and get a reservation
@@ -209,7 +219,7 @@ local function CAIreserveResidence(colonist, dome)
 end -- CAIreserveResidence()
 
 -- try and reserve a residence before migration check in a connected dome
--- check conected domes if can move there and return the largest spaced one
+-- check connected domes if can move there and return the largest spaced one
 local function CAIcanReserveResInConnnectedDome(colonist, e_dome)
 	local haveSpace = false
 	if not e_dome then return false, false end -- short circuit if empty
@@ -364,14 +374,17 @@ function CAIjobmigrate()
 	for i = 1, #colonists do
 		if colonists[i].workplace then
 			local c  = colonists[i]
-			local cw = c.workplace
+			local cw = c.workplace -- if unemployed, this is false
 			local c_dome = c.dome or c.current_dome
-			local cw_dome = cw.parent_dome or FindNearestObject(UICity.labels.Dome, cw)
+			-- add a check for unemployed and dont try a migration
+			local cw_dome = cw and cw.parent_dome or FindNearestObject(UICity.labels.Dome, cw)
 			if cw and c_dome and cw_dome and (not IsKindOfClasses(cw, "School", "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and
 			   CAIcanMoveHere(c, cw) and CAIreserveResidence(c, cw_dome) then
 				  c:SetForcedDome(cw_dome)
 				  count = count + 1
-				  if lf_print then print(string.format("Colonist %s is moving from %s to %s", IT(c.name), IT(c_dome.name), IT(c.cw_dome.name))) end
+				  if lf_print then print(string.format("Colonist %s is moving from %s to %s", IT(c.name), IT(c_dome.name), IT(cw_dome.name))) end
+			elseif not cw then
+				if lf_print then print(string.format("Colonist %s is Jobless in dome %s", IT(c.name), IT(c_dome.name))) end
 			end -- if c_dome ~= cw_dome
 		end -- if
 	end -- for i
