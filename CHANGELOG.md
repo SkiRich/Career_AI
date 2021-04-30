@@ -1,4 +1,27 @@
 # Changelog for Career A.I.
+## v1.7.4 04/30/2021 3:33:21 PM
+#### Changed
+- local function ModOptions() - Needed to add check to ModConfig function.
+- function CAIcheckAmateurs(gamestart) is now local and moved to ModConfig file
+- local function CAIamateurPopup() moved to ModConfig file
+- g_ModConfigLoaded is now local ModConfigLoaded
+- CAIcheckAmateurs(gamestart) to include new ModOptions
+
+#### Added
+- WaitForModConfig()
+
+#### Removed
+
+#### Fixed Issues
+- Error spam in log for modoptions changes if user does not have modconfig
+
+#### Open Issues
+
+#### Deprecated
+
+#### Todo
+
+--------------------------------------------------------
 ## v1.7.3 03/24/2021 11:50:27 PM
 #### Changed
 - function CAIreserveResidence - updated for the new exclusive mechanic
