@@ -45,7 +45,8 @@ local function WaitForModConfig()
 
       -- See if ModConfig is installed and any defaults changed
       if ModConfigLoaded and ModConfig:IsReady() then
-	      -- load up defaults these are persistent vars
+	      -- load up defaults
+	      -- these are all persistent vars so vars take presedence over modconfig
 		    local CAIenabled = ModConfig:Get("CAI", "CAIenabled")
 		    if g_CAIenabled ~= CAIenabled then
 			    ModConfig:Set("CAI", "CAIenabled", g_CAIenabled, "reset")
@@ -57,6 +58,12 @@ local function WaitForModConfig()
 		    if g_CAIminSpecialists ~= CAIminSpecialists then
           ModConfig:Set("CAI", "CAIminSpecialists", g_CAIminSpecialists, "reset")
         end -- if g_CAIminSpecialists
+
+        -- g_CAInoticeDismissTime = 15000
+		    local CAInoticeDismissTime = ModConfig:Get("CAI", "CAInoticeDismissTime")
+		    if g_CAInoticeDismissTime ~= (CAInoticeDismissTime * 1000) then
+          ModConfig:Set("CAI", "CAInoticeDismissTime", MulDivRound(g_CAInoticeDismissTime, 1, 1000), "reset")
+        end --   if g_CAInoticeDismissTime
 
 
         ModLog(string.format("%s detected ModConfig running - Setup Complete", mod_name))
@@ -236,6 +243,11 @@ function OnMsg.ModConfigChanged(mod_id, option_id, value, old_value, token)
     if option_id == "CAIminSpecialists" then
     	g_CAIminSpecialists = value
     end -- if g_CAIminSpecialists
+
+    -- g_CAInoticeDismissTime = 15000
+    if option_id == "CAInoticeDismissTime" then
+    	g_CAInoticeDismissTime = value * 1000
+    end -- if g_CAInoticeDismissTime
 
   end -- if ModConfigLoaded
 end -- OnMsg.ModConfigChanged
