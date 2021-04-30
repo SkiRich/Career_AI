@@ -14,7 +14,7 @@ return PlaceObj('ModDef', {
 	'pops_desktop_uuid', "5078b6ce-3d7b-4ffd-9a3f-66c8b4b63d4c",
 	'pops_any_uuid', "3d7603a5-7498-4bfb-b964-e12bfca34e3a",
 	'author', "SkiRich",
-	'version', 40,
+	'version', 43,
 	'lua_revision', 233360,
 	'saved_with_revision', 1001586,
 	'code', {
@@ -22,7 +22,7 @@ return PlaceObj('ModDef', {
 		"Code/CAI_2ModConfig.lua",
 	},
 	'has_options', true,
-	'saved', 1619817556,
+	'saved', 1619818689,
 	'screenshot1', "Images/CareerAILogo.png",
 	'screenshot2', "Images/CAINotice.png",
 	'screenshot3', "Images/CAIModConfig.png",
