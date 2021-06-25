@@ -1,4 +1,12 @@
 # Changelog for Career A.I.
+## v1.7.5  06/24/2021 10:43:35 PM
+#### Changed
+- CAI_2ModConfig.lua file - added lf_printRules local var
+
+#### Fixed Issues
+- throwing error for not defining lf_printRules
+
+--------------------------------------------------------
 ## v1.7.4 04/30/2021 3:33:21 PM
 #### Changed
 - local function ModOptions() - Needed to add check to ModConfig function.

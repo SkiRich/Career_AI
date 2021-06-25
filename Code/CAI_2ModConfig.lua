@@ -3,9 +3,10 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated March 24th, 2021
+-- Updated June 25th, 2021
 
 local lf_print = false -- Setup debug printing in local file
+local lf_printRules = false -- Setup debug printing in local file
 
 local StringIdBase = 17764701500 -- Career AI  : 701500 - 701599 this file: 1-49 Next: 13
 -- using 17764701506 in items.lua
