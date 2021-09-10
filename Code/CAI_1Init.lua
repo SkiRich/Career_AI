@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated March 24th, 2021
+-- Updated Sept 10th, 2021
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -52,7 +52,7 @@ end -- CAIvalidateBld(building)
 local function CAIgatherOpenJobs(jobtype)
 	local openjobs = {counts = {}, employers = {}}
 	local jobsbyspec = {}
-	local workplaces = UICity.labels.Workplace or empty_table
+	local workplaces = MainCity.labels.Workplace or empty_table
 
   -- gather all jobs by spec type
 	for i = 1, #workplaces do
@@ -94,7 +94,7 @@ end -- CAIgatherOpenJobs()
 -- exclude children and seniors that cannot work
 -- jobtype   : string, optional - gather all the colonists for any jobtype using jobtype = "thejobtype"
 local function CAIgatherColonists(jobtype)
-	local colonists = UICity.labels.Colonist or empty_table
+	local colonists = MainCity.labels.Colonist or empty_table
 	local jobhunters = {}
 
 	for i = 1, #colonists do
@@ -145,7 +145,7 @@ end -- CAIcanWorkHere(colonist, workplace)
 -- determine if colonist can move into dome with dome filters
 -- determine if colonist is quarantined in their current dome
 local function CAIcanMoveHere(colonist, workplace, dDome)
-	local d_dome        = dDome or workplace.parent_dome or FindNearestObject(UICity.labels.Dome, workplace)
+	local d_dome        = dDome or workplace.parent_dome or FindNearestObject(MainCity.labels.Dome, workplace)
 	local c_canMove     = colonist.dome and colonist.dome.accept_colonists
 	local eval          = TraitFilterColonist(d_dome.trait_filter, colonist.traits)
 	if c_canMove and d_dome.accept_colonists and eval >= 0 then
@@ -157,11 +157,11 @@ end -- CAIcanMoveHere(colonist, workplace)
 
 -- copy of ShuttleHub:GetGlobalLoad()
 local function ShuttleLoadOK()
-	local UICity = UICity
+	local MainCity = MainCity
   local shuttles = 0
   local tasks = LRManagerInstance and LRManagerInstance:EstimateTaskCount()
   if tasks then
-    for _, hub in ipairs(UICity.labels.ShuttleHub or empty_table) do
+    for _, hub in ipairs(MainCity.labels.ShuttleHub or empty_table) do
       if hub.working or hub.suspended then
         shuttles = shuttles + #hub.shuttle_infos
       end
@@ -250,7 +250,7 @@ end -- CAIreserveResInConnnectedDome()
 -- main function called once daily to move specialists around to better jobs
 -- jobtype   : string, optional - jobhunt for jobtype using jobtype = "thejobtype"
 function CAIjobhunt(jobtype)
-	local UICity = UICity
+	local MainCity = MainCity
 	local FindNearestObject = FindNearestObject
 	local openjobs = CAIgatherOpenJobs(jobtype)
 	local jobhunters = CAIgatherColonists(jobtype)
@@ -294,7 +294,7 @@ function CAIjobhunt(jobtype)
 						  	local avoid_workplace = applicants[1].avoid_workplace or ""
 						  	if avoid_workplace ~= employers[i]  and applicants[1]:CanReachBuilding(employers[i]) then -- if they alowed to take the job, can walk or get a ride then move
 						  	  local a_dome = applicants[1].dome or applicants[1].current_dome or applicants[1]:GetPos() -- current_dome is just in case the colonist is currently moving domes.
-						  	  local e_dome = employers[i].parent_dome or FindNearestObject(UICity.labels.Dome, employers[i])
+						  	  local e_dome = employers[i].parent_dome or FindNearestObject(MainCity.labels.Dome, employers[i])
 						  	  ----- This section is for local domes in walking distance -----
 						  	  if a_dome == e_dome or IsInWalkingDistDome(a_dome, e_dome) then
 						  	  	-- if applicant can get to the job, then set it right away
@@ -367,8 +367,8 @@ end -- CAIjobhunt()
 
 -- check current home dome versus job dome and if possible move to job dome
 function CAIjobmigrate()
-	local UICity = UICity
-	local colonists = UICity.labels.Colonist or empty_table
+	local MainCity = MainCity
+	local colonists = MainCity.labels.Colonist or empty_table
 	local count  = 0
   if lf_print then print("--- Starting CAIjobmigrate check ---") end
 	for i = 1, #colonists do
@@ -377,7 +377,7 @@ function CAIjobmigrate()
 			local cw = c.workplace -- if unemployed, this is false
 			local c_dome = c.dome or c.current_dome
 			-- add a check for unemployed and dont try a migration
-			local cw_dome = cw and cw.parent_dome or FindNearestObject(UICity.labels.Dome, cw)
+			local cw_dome = cw and cw.parent_dome or FindNearestObject(MainCity.labels.Dome, cw)
 			if cw and c_dome and cw_dome and (not IsKindOfClasses(cw, "School", "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and
 			   CAIcanMoveHere(c, cw) and CAIreserveResidence(c, cw_dome) then
 				  c:SetForcedDome(cw_dome)
@@ -433,11 +433,11 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   -- lets try and put people where they work best
   if (specialist ~= "none") and (#sworkplaces > 0) then
   	-- we got specialist workplaces and a specialist go find a spot and kick out non specs
-  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("++ Specialist can find spec work") end
+  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("++ Specialist can find spec work: ", specialist) end
   	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, sworkplaces, true) -- true here to kick out non specs
   elseif (specialist ~= "none") and (#sworkplaces == 0) then
   	-- we got a specialist but no specialist specific workplaces just use the regular function but dont kick out anyone
-  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("-- Specialist has NO spec work") end
+  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("-- Specialist has NO spec work: ", specialist) end
   	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, false) -- false here to not kickout non specs, find a job you bum
   elseif (specialist == "none") and (#nsworkplaces > 0) then
   	-- we got a non-specialist so find non-specialist work first dont kick anyone out.
@@ -448,7 +448,7 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   if best_bld and best_shift then
     -- if we got proper work and we can get there, then return that work
   	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
-  		local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UICity.labels.Dome, best_bld))
+  		local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(MainCity.labels.Dome, best_bld))
   	  print("Best Bld: ", (best_bld and IT(best_bld.name ~= "" and best_bld.name or best_bld.display_name)), " located at: ", IT(best_bld_dome.name))
   	  print("Best Shift: ", best_shift)
   	  print(string.format("Best Kick: %s - %s", (best_to_kick and IT(best_to_kick.name) or ""), (best_to_kick and best_to_kick.specialist or "")  ))
@@ -459,7 +459,7 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   	-- we got no work so lets just ask anyway, but dont kick anyone out to prevent job hopping
   	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, false) -- use default and prevent job hopping.
     if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
-    	local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UICity.labels.Dome, best_bld))
+    	local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(MainCity.labels.Dome, best_bld))
     	print("===========================================================")
     	print("------+++++= Default ChooseWorkplace in Effect =+++++------")
     	print("===========================================================")
@@ -511,7 +511,7 @@ function CAIincompatibeModCheck()
         if choice == 1 then
         end -- if statement
         local msgCIA = T(StringIdBase + 5, "Career A.I. is disabled")
-        AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime})
+        AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime}, MainCity.map_id)
 	      PlayFX("UINotificationResearchComplete")
     end ) -- CreateRealTimeThread
   end -- if foundIncompatibleMods

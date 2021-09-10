@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated June 25th, 2021
+-- Updated Sept 10th, 2021
 
 local lf_print = false -- Setup debug printing in local file
 local lf_printRules = false -- Setup debug printing in local file
@@ -83,7 +83,7 @@ local function WaitForModConfig()
 	    else
 	    	msgCIA = T(StringIdBase + 2, "Career A.I. is disabled")
 	    end -- if g_CAIenabled
-	    AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime})
+	    AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime}, MainCity.map_id)
 	    PlayFX("UINotificationResearchComplete")
 
       if lf_print then print(string.format("%s WaitForModConfig Thread Ended", mod_name)) end
@@ -236,7 +236,7 @@ function OnMsg.ModConfigChanged(mod_id, option_id, value, old_value, token)
 	    else
 	    	msgCIA = T(StringIdBase + 2, "Career A.I. is disabled")
 	    end -- if g_CAIenabled
-	    AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime})
+	    AddCustomOnScreenNotification("CAI_Notice", T{StringIdBase, "Career A.I."}, msgCIA, iconCIAnotice, nil, {expiration = g_CAInoticeDismissTime}, MainCity.map_id)
 	    PlayFX("UINotificationResearchComplete")
   	end -- if g_CAIenabled
 
