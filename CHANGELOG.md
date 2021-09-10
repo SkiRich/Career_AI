@@ -1,4 +1,15 @@
 # Changelog for Career A.I.
+## v1.8.0 09/10/2021 3:42:09 AM
+#### Changed
+- Picard version bump
+- Replaced UICity with MainCity
+- Added MainCity.map_id to AddCustomNotifications function
+- Tweeked some debugs
+
+#### Todo
+- Add Underground
+
+--------------------------------------------------------
 ## v1.7.5  06/24/2021 10:43:35 PM
 #### Changed
 - CAI_2ModConfig.lua file - added lf_printRules local var
