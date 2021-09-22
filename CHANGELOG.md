@@ -1,4 +1,31 @@
 # Changelog for Career A.I.
+## [v1.8.1] 09/22/21 2:35:36 PM
+#### Changed
+- debug texts to make it eaier to spot during debug
+- various comments
+- replaced MainCity with UIColony
+- function CAIgatherOpenJobs(jobtype)  - now chebcking for closed shifts in adition to open slots
+- function CAIgetFreeSlots(workplace)  - now checking for closed shifts in adition to open slots
+- function CAIcanMoveHere(colonist, workplace, dDome) - improved logic
+- local function ShuttleLoadOK(city) now uses the employer city to test for load.
+- various debug improvments
+- using InWalkingDist instead of InWalkingDistDome in job hunt routines
+
+#### Added
+
+#### Removed
+
+#### Fixed Issues
+- new patch no longer reports closed slots when closing entire shifts.  workers could be assigned to a slot when a shift was closed.
+- issue with wandering colonists across map for work.
+
+#### Open Issues
+
+#### Deprecated
+
+#### Todo
+
+--------------------------------------------------------
 ## v1.8.0 09/10/2021 3:42:09 AM
 #### Changed
 - Picard version bump

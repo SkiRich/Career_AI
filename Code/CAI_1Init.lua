@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Sept 10th, 2021
+-- Updated Sept 22th, 2021
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -11,7 +11,8 @@ local lf_printDebug = false -- debug ChooseWorkplace
 local lf_printRules = false -- debug Rules check
 local lf_watchSpec  = "engineer" -- specialist type to watch during debug
                             -- Use if lf_print then print("something") end
-                            -- use Msg("ToggleLFPrint", "CAI", "printdebug", "geologist") to toggle
+                            -- use Msg("ToggleLFPrint", "CAI", "printdebug", "geologist") to toggle whating a jobspec
+                            -- use Msg("ToggleLFPrint", "CAI", "printdebug") to watch all jobspecs
 
 local ModDir = CurrentModPath
 local iconCIAnotice = ModDir.."UI/Icons/CareerAINotice.png"
@@ -52,7 +53,7 @@ end -- CAIvalidateBld(building)
 local function CAIgatherOpenJobs(jobtype)
 	local openjobs = {counts = {}, employers = {}}
 	local jobsbyspec = {}
-	local workplaces = MainCity.labels.Workplace or empty_table
+	local workplaces = UIColony.city_labels.labels.Workplace or empty_table
 
   -- gather all jobs by spec type
 	for i = 1, #workplaces do
@@ -67,11 +68,13 @@ local function CAIgatherOpenJobs(jobtype)
 			if not openjobs.employers[jobspec] then openjobs.employers[jobspec] = {} end -- setup sub-table
 			if not openjobs.counts[jobspec] then openjobs.counts[jobspec] = 0 end -- setup sub-table
 			for i = 1, #workplace do
+			  local wp = workplace[i]
 				local numopenjobs = 0
-				if CAIvalidateBld(workplace[i]) then -- check to make sure building is not destroyed  workplace.ui_working
-				  numopenjobs = numopenjobs + workplace[i]:GetFreeWorkSlots(1)
-				  numopenjobs = numopenjobs + workplace[i]:GetFreeWorkSlots(2)
-				  numopenjobs = numopenjobs + workplace[i]:GetFreeWorkSlots(3)
+				if CAIvalidateBld(wp) then -- check to make sure building is not destroyed  workplace.ui_working
+				  -- need to check for closed shift now since the devs fucked up closed_workplaces for since shift buildings
+				  numopenjobs = numopenjobs + (((not wp:IsClosedShift(1)) and (wp:GetFreeWorkSlots(1))) or 0)
+				  numopenjobs = numopenjobs + (((not wp:IsClosedShift(2)) and (wp:GetFreeWorkSlots(2))) or 0)
+				  numopenjobs = numopenjobs + (((not wp:IsClosedShift(3)) and (wp:GetFreeWorkSlots(3))) or 0)
 				end -- if ValidateBuilding
 				if numopenjobs > 0 then
 					table.insert(openjobs.employers[jobspec], workplace[i])
@@ -94,7 +97,7 @@ end -- CAIgatherOpenJobs()
 -- exclude children and seniors that cannot work
 -- jobtype   : string, optional - gather all the colonists for any jobtype using jobtype = "thejobtype"
 local function CAIgatherColonists(jobtype)
-	local colonists = MainCity.labels.Colonist or empty_table
+	local colonists = UIColony.city_labels.labels.Colonist or empty_table
 	local jobhunters = {}
 
 	for i = 1, #colonists do
@@ -119,9 +122,9 @@ end -- CAIgatherColonists()
 local function CAIgetFreeSlots(workplace)
 	local numopenslots = {}
 	if ValidateBuilding(workplace) then -- check to make sure building is not destroyed
-	  numopenslots[1] = workplace:GetFreeWorkSlots(1) or 0
-	  numopenslots[2] = workplace:GetFreeWorkSlots(2) or 0
-	  numopenslots[3] = workplace:GetFreeWorkSlots(3) or 0
+	  numopenslots[1] = (((not workplace:IsClosedShift(1)) and (workplace:GetFreeWorkSlots(1))) or 0)
+	  numopenslots[2] = (((not workplace:IsClosedShift(2)) and (workplace:GetFreeWorkSlots(2))) or 0)
+	  numopenslots[3] = (((not workplace:IsClosedShift(3)) and (workplace:GetFreeWorkSlots(3))) or 0)
 	end -- if ValidateBuilding
 	return numopenslots
 end -- CAIgetFreeSlots(employer)
@@ -145,23 +148,23 @@ end -- CAIcanWorkHere(colonist, workplace)
 -- determine if colonist can move into dome with dome filters
 -- determine if colonist is quarantined in their current dome
 local function CAIcanMoveHere(colonist, workplace, dDome)
-	local d_dome        = dDome or workplace.parent_dome or FindNearestObject(MainCity.labels.Dome, workplace)
+	local d_dome        = dDome or workplace.parent_dome or FindNearestObject(workplace.city.labels.Dome, workplace)
 	local c_canMove     = colonist.dome and colonist.dome.accept_colonists
 	local eval          = TraitFilterColonist(d_dome.trait_filter, colonist.traits)
-	if c_canMove and d_dome.accept_colonists and eval >= 0 then
+	if c_canMove and d_dome and d_dome.accept_colonists and eval >= 0 then
 		return true
 	else
 		return false
 	end -- if eval
 end -- CAIcanMoveHere(colonist, workplace)
 
--- copy of ShuttleHub:GetGlobalLoad()
-local function ShuttleLoadOK()
-	local MainCity = MainCity
+-- copy of ShuttleHub:GetGlobalLoad() from ShuttleHub.lua
+local function ShuttleLoadOK(city)
+  city = city or (UIColony and UIColony.city_labels) or empty_table
   local shuttles = 0
   local tasks = LRManagerInstance and LRManagerInstance:EstimateTaskCount()
   if tasks then
-    for _, hub in ipairs(MainCity.labels.ShuttleHub or empty_table) do
+    for _, hub in ipairs(city.labels.ShuttleHub or empty_table) do
       if hub.working or hub.suspended then
         shuttles = shuttles + #hub.shuttle_infos
       end
@@ -181,7 +184,7 @@ local function ShuttleLoadOK()
   return false
 end -- ShuttleLoadOK()
 
--- checks for any sponsor that has no comute penalty
+-- checks for any sponsor that has no commute penalty
 local function ShouldMigrate()
 	local sponsor = GetMissionSponsor()
 	if sponsor.id == "Brazil" then return false end
@@ -250,7 +253,7 @@ end -- CAIreserveResInConnnectedDome()
 -- main function called once daily to move specialists around to better jobs
 -- jobtype   : string, optional - jobhunt for jobtype using jobtype = "thejobtype"
 function CAIjobhunt(jobtype)
-	local MainCity = MainCity
+	local UIColony = UIColony
 	local FindNearestObject = FindNearestObject
 	local openjobs = CAIgatherOpenJobs(jobtype)
 	local jobhunters = CAIgatherColonists(jobtype)
@@ -278,46 +281,48 @@ function CAIjobhunt(jobtype)
 			end -- if lf_print
 			for i = 1, #employers do
 				local numopenslots = CAIgetFreeSlots(employers[i])
+				local displayEmployer = lf_print and {name = IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name), 
+							                                dome = IT(employers[i].parent_dome.name or FindNearestObject(employers[i].city.labels.Dome, employers[i]).name)} or empty_table
 				for shift = 1, 3 do
 					if numopenslots[shift] > 0 and #applicants > 0 then
 						if lf_print then
 							print("--------------------------------------------")
-							print(string.format("Employer: %s has %s open slots in shift %s", IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name), numopenslots[shift], shift))
+							print(string.format("Employer: %s in or near dome: %s has %s open slots in shift %s", displayEmployer.name, displayEmployer.dome, numopenslots[shift], shift))
 						end -- if lf_print
 						for slot = 1, numopenslots[shift] do
 						  if #applicants > 0 then
 						  	if lf_print then
 						  		local aworkplace = applicants[1].workplace or "Unemployed"
 						  		if aworkplace ~= "Unemployed" then aworkplace = aworkplace.name ~= "" and aworkplace.name or aworkplace.display_name end
-						  		print(string.format("Applicant %s is moving from %s to %s", IT(applicants[1].name), IT(aworkplace), IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name)))
+						  		print(string.format("Applicant %s is moving from %s to %s", IT(applicants[1].name), IT(aworkplace), displayEmployer.name))
 						  	end -- if lf_print
 						  	local avoid_workplace = applicants[1].avoid_workplace or ""
 						  	if avoid_workplace ~= employers[i]  and applicants[1]:CanReachBuilding(employers[i]) then -- if they alowed to take the job, can walk or get a ride then move
 						  	  local a_dome = applicants[1].dome or applicants[1].current_dome or applicants[1]:GetPos() -- current_dome is just in case the colonist is currently moving domes.
-						  	  local e_dome = employers[i].parent_dome or FindNearestObject(MainCity.labels.Dome, employers[i])
+						  	  local e_dome = employers[i].parent_dome or FindNearestObject(employers[i].city.labels.Dome, employers[i])
 						  	  ----- This section is for local domes in walking distance -----
-						  	  if a_dome == e_dome or IsInWalkingDistDome(a_dome, e_dome) then
+						  	  if a_dome == e_dome or IsInWalkingDist(a_dome, e_dome) then
 						  	  	-- if applicant can get to the job, then set it right away
 						  	  	if a_dome == e_dome then
 						  	  		-- if home dome
 						  	  		if lf_print then print(string.format("Applicant %s is staying in home dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
-						  	  	elseif ShouldMigrate() and a_dome.accept_colonists and e_dome.accept_colonists and e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) and CAIreserveResidence(applicants[1], e_dome) then
-						  	  		-- not home but but can migrate in walking distance
+						  	  	elseif ShouldMigrate() and a_dome.accept_colonists and e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) and CAIreserveResidence(applicants[1], e_dome) then
+						  	  		-- not home but but can migrate in walking distance 
 						  	  		if lf_print then print(string.format("Applicant %s is moving to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	  		applicants[1]:SetForcedDome(e_dome)
-						  	  	elseif e_dome:CanColonistsFromDifferentDomesWorkServiceTrainHere() and a_dome.accept_colonists and e_dome.accept_colonists and a_dome.allow_work_in_connected then
-						  	  		-- not home dome can commute
-						  	  		if lf_print then print(string.format("Applicant %s is commuting to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
+						  	  	elseif e_dome:CanColonistsFromDifferentDomesWorkServiceTrainHere() and AreDomesConnected(a_dome, e_dome) and a_dome.accept_colonists and e_dome.accept_colonists and a_dome.allow_work_in_connected then
+						  	  		-- not home dome can commute to connected dome
+						  	  		if lf_print then print(string.format("Applicant %s is commuting from %s to dome %s", IT(applicants[1].name), IT(a_dome.name) , IT(e_dome.name))) end
 						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	    end -- if a_dome == e_dome
 						  	    ----- This section is if they can migrate with LRTransport and live in same dome -----
 						  	  elseif a_dome ~= e_dome and a_dome.accept_colonists and e_dome.accept_colonists and
-						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and ShuttleLoadOK() and
+						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and ShuttleLoadOK(e_dome.city) and
 						  	         CAIcanMoveHere(applicants[1], employers[i]) and CAIreserveResidence(applicants[1], e_dome) then
 						  	  	-- not home dome must relocate
 						  	  	-- relocate colonist and consider space for home
@@ -329,7 +334,7 @@ function CAIjobhunt(jobtype)
 						  	  	applicants[1]:SetForcedDome(e_dome)
 						  	  	----- This section is if they can migrate with LRTransport and live in connected dome -----
 						  	  elseif a_dome ~= e_dome and a_dome.accept_colonists and e_dome.accept_colonists and
-						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and ShuttleLoadOK() and
+						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and ShuttleLoadOK(e_dome.city) and
 						  	         CAIcanMoveHere(applicants[1], employers[i]) then
 						  	         	-- check conected domes if can move there and return the largest spaced one
 						  	         	local hasSpace, targetDome = CAIcanReserveResInConnnectedDome(applicants[1], e_dome)
@@ -367,8 +372,8 @@ end -- CAIjobhunt()
 
 -- check current home dome versus job dome and if possible move to job dome
 function CAIjobmigrate()
-	local MainCity = MainCity
-	local colonists = MainCity.labels.Colonist or empty_table
+	local UIColony = UIColony
+	local colonists = UIColony.city_labels.labels.Colonist or empty_table
 	local count  = 0
   if lf_print then print("--- Starting CAIjobmigrate check ---") end
 	for i = 1, #colonists do
@@ -377,7 +382,7 @@ function CAIjobmigrate()
 			local cw = c.workplace -- if unemployed, this is false
 			local c_dome = c.dome or c.current_dome
 			-- add a check for unemployed and dont try a migration
-			local cw_dome = cw and cw.parent_dome or FindNearestObject(MainCity.labels.Dome, cw)
+			local cw_dome = cw and cw.parent_dome or FindNearestObject(UIColony.city_labels.labels.Dome, cw)
 			if cw and c_dome and cw_dome and (not IsKindOfClasses(cw, "School", "Sanatorium", "MartianUniversity")) and c_dome ~= cw_dome and cw_dome:GetFreeLivingSpace() > 0 and
 			   CAIcanMoveHere(c, cw) and CAIreserveResidence(c, cw_dome) then
 				  c:SetForcedDome(cw_dome)
@@ -433,22 +438,22 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   -- lets try and put people where they work best
   if (specialist ~= "none") and (#sworkplaces > 0) then
   	-- we got specialist workplaces and a specialist go find a spot and kick out non specs
-  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("++ Specialist can find spec work: ", specialist) end
+  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("++ Specialist finding spec work: ", specialist) end
   	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, sworkplaces, true) -- true here to kick out non specs
   elseif (specialist ~= "none") and (#sworkplaces == 0) then
   	-- we got a specialist but no specialist specific workplaces just use the regular function but dont kick out anyone
-  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("-- Specialist has NO spec work: ", specialist) end
+  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("-- Specialist finding non-spec work: ", specialist) end
   	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, false) -- false here to not kickout non specs, find a job you bum
   elseif (specialist == "none") and (#nsworkplaces > 0) then
   	-- we got a non-specialist so find non-specialist work first dont kick anyone out.
-  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("++ NON Specialist can find work") end
+  	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then print("++ NON Specialist finding no-spec work") end
   	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, nsworkplaces, false) -- false here to not kickout anyone, find a job you bum
   end -- if (specialist ~= "none") and (#sworkplaces > 0)
 
   if best_bld and best_shift then
     -- if we got proper work and we can get there, then return that work
   	if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
-  		local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(MainCity.labels.Dome, best_bld))
+  		local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(unit.city.labels.Dome, best_bld))
   	  print("Best Bld: ", (best_bld and IT(best_bld.name ~= "" and best_bld.name or best_bld.display_name)), " located at: ", IT(best_bld_dome.name))
   	  print("Best Shift: ", best_shift)
   	  print(string.format("Best Kick: %s - %s", (best_to_kick and IT(best_to_kick.name) or ""), (best_to_kick and best_to_kick.specialist or "")  ))
@@ -459,7 +464,7 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   	-- we got no work so lets just ask anyway, but dont kick anyone out to prevent job hopping
   	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, false) -- use default and prevent job hopping.
     if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
-    	local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(MainCity.labels.Dome, best_bld))
+    	local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UIColony.city_labels.labels.Dome, best_bld))
     	print("===========================================================")
     	print("------+++++= Default ChooseWorkplace in Effect =+++++------")
     	print("===========================================================")
@@ -518,6 +523,7 @@ function CAIincompatibeModCheck()
 end -- function end
 
 ---------------------------------------------- OnMsgs -----------------------------------------------
+
 
 function OnMsg.NewHour(hour)
 	-- specialists jobhunt
