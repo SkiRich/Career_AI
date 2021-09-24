@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Sept 22th, 2021
+-- Updated Sept 24th, 2021
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -523,6 +523,25 @@ function CAIincompatibeModCheck()
 end -- function end
 
 ---------------------------------------------- OnMsgs -----------------------------------------------
+
+function OnMsg.ClassesGenerate()
+  
+  
+  -- re-write from colonist.lua
+  -- devs eliminated the jobbefore setting the avoid workplace - I just reversed the code.
+  Old_Colonist_GetFired = Colonist.GetFired
+  function Colonist:GetFired()
+    if not g_CAIenabled then return Old_Colonist_GetFired(self) end -- shortcircuit
+    if not self.workplace then
+      return
+    end -- if
+    self.avoid_workplace = self.workplace
+    self.avoid_workplace_start = UIColony.day
+    self:SetWorkplace(false)
+    self:ChangeWorkplacePerformance()
+  end -- function Colonist:GetFired()
+  
+end -- OnMsg.ClassesGenerate()
 
 
 function OnMsg.NewHour(hour)
