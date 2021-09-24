@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Sept 22th, 2021
+-- Updated Sept 24th, 2021
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -297,7 +297,7 @@ function CAIjobhunt(jobtype)
 						  		print(string.format("Applicant %s is moving from %s to %s", IT(applicants[1].name), IT(aworkplace), displayEmployer.name))
 						  	end -- if lf_print
 						  	local avoid_workplace = applicants[1].avoid_workplace or ""
-						  	if avoid_workplace ~= employers[i]  and applicants[1]:CanReachBuilding(employers[i]) then -- if they alowed to take the job, can walk or get a ride then move
+						  	if avoid_workplace ~= employers[i] and applicants[1]:CanReachBuilding(employers[i]) then -- if they alowed to take the job, can walk or get a ride then move
 						  	  local a_dome = applicants[1].dome or applicants[1].current_dome or applicants[1]:GetPos() -- current_dome is just in case the colonist is currently moving domes.
 						  	  local e_dome = employers[i].parent_dome or FindNearestObject(employers[i].city.labels.Dome, employers[i])
 						  	  ----- This section is for local domes in walking distance -----
@@ -346,7 +346,7 @@ function CAIjobhunt(jobtype)
 						  	  end --  if a_dome == e_dome or IsInWalkingDist
 						  	  table.remove(applicants, 1)
 						  	else
-						  		if lf_print then print("Applicant cant reach prospective employer") end
+						  		if lf_print then print("Applicant cant reach prospective employer or was fired from this job") end
 						  		if #employers == 1 and #applicants > 1 then
 						  			-- remove the applicant if we can try another applicant for this job and its the only job
 						  			table.remove(applicants, 1)
@@ -523,6 +523,25 @@ function CAIincompatibeModCheck()
 end -- function end
 
 ---------------------------------------------- OnMsgs -----------------------------------------------
+
+function OnMsg.ClassesGenerate()
+  
+  
+  -- re-write from colonist.lua
+  -- devs eliminated the jobbefore setting the avoid workplace - I just reversed the code.
+  Old_Colonist_GetFired = Colonist.GetFired
+  function Colonist:GetFired()
+    if not g_CAIenabled then return Old_Colonist_GetFired(self) end -- shortcircuit
+    if not self.workplace then
+      return
+    end -- if
+    self.avoid_workplace = self.workplace
+    self.avoid_workplace_start = UIColony.day
+    self:SetWorkplace(false)
+    self:ChangeWorkplacePerformance()
+  end -- function Colonist:GetFired()
+  
+end -- OnMsg.ClassesGenerate()
 
 
 function OnMsg.NewHour(hour)

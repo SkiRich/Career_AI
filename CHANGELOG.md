@@ -1,4 +1,13 @@
 # Changelog for Career A.I.
+## [v1.8.2] 09/24/21 3:36:59 AM
+
+#### Added
+- function Colonist:GetFired() - re-write to fix the developers code
+
+#### Fixed Issues
+- colonist came back after being fired
+
+--------------------------------------------------------
 ## [v1.8.1] 09/22/21 2:35:36 PM
 #### Changed
 - debug texts to make it eaier to spot during debug
