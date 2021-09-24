@@ -1,4 +1,24 @@
 # Changelog for Career A.I.
+## [v1.8.3] 09/24/21 4:24:15 PM
+#### Changed
+- function CAIcanWorkHere(colonist, workplace) and implemented it in JobHunt()
+
+#### Added
+- some more documentation
+- local function CAIhasIncompatibleTraits(workplace, unit_traits) 
+- table.remove(applicants, 1) to each positive hit in finding a job in jobhunt
+
+#### Removed
+
+#### Fixed Issues
+
+#### Open Issues
+
+#### Deprecated
+
+#### Todo
+
+--------------------------------------------------------
 ## [v1.8.2] 09/24/21 3:36:59 AM
 
 #### Added

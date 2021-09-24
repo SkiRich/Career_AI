@@ -130,18 +130,26 @@ local function CAIgetFreeSlots(workplace)
 end -- CAIgetFreeSlots(employer)
 
 
--- determine if colonist can work at the job with enforcement
--- currently not used
-local function CAIcanWorkHere(colonist, workplace)
-  if workplace.specialist_enforce_mode then
-    if (workplace.specialist or "none") ~= (colonist.specialist or "none") then
-      return false
-    else
-    	return true
-    end -- if workplace specialties dont match
-  else
-  	return true
-  end
+
+-- determine if the building traits are incompatible
+local function CAIhasIncompatibleTraits(workplace, unit_traits)
+  for _, trait in ipairs(workplace.incompatible_traits) do
+    if unit_traits[trait] then
+      return true
+    end -- if
+  end -- for
+end -- function CAIhasIncompatibleTraits()
+
+
+-- determine if colonist can work at a job with enforcement/traits
+-- logic based on ShouldProc from workplacec.lua
+function CAIcanWorkHere(colonist, workplace)
+  -- lets check out the building 
+  if ValidateBuilding(workplace) and (colonist.avoid_workplace ~= workplace) and workplace.ui_working and (workplace.max_workers > 0) and
+     (not workplace.specialist_enforce_mode or ((workplace.specialist or "none") == colonist.specialist)) and 
+     (not HasIncompatibleTraits(workplace, colonist.traits)) 
+  then return true end 
+  return false
 end -- CAIcanWorkHere(colonist, workplace)
 
 
@@ -280,15 +288,24 @@ function CAIjobhunt(jobtype)
 				print("We have applicants and jobs to switch for job type: ", speclist[spec], " - #Applicants: ", #applicants, " #Employers: ", #employers)
 			end -- if lf_print
 			for i = 1, #employers do
+			  -- test applicants list against all an emloyer of that job type
+			  -- if employer is not a match then move applicant to retestApplicant table and try the next applicant
+			  -- remove applicant for the list of matched
+			  -- when switching employers to test, move the retestApplicants back and try next employer
+			  
 				local numopenslots = CAIgetFreeSlots(employers[i])
 				local displayEmployer = lf_print and {name = IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name), 
 							                                dome = IT(employers[i].parent_dome.name or FindNearestObject(employers[i].city.labels.Dome, employers[i]).name)} or empty_table
+				
 				for shift = 1, 3 do
+				  -- if there are open job slots in this shift and we got applicants
 					if numopenslots[shift] > 0 and #applicants > 0 then
 						if lf_print then
 							print("--------------------------------------------")
 							print(string.format("Employer: %s in or near dome: %s has %s open slots in shift %s", displayEmployer.name, displayEmployer.dome, numopenslots[shift], shift))
 						end -- if lf_print
+						
+						-- fill each slot with an applicant if possible
 						for slot = 1, numopenslots[shift] do
 						  if #applicants > 0 then
 						  	if lf_print then
@@ -296,29 +313,34 @@ function CAIjobhunt(jobtype)
 						  		if aworkplace ~= "Unemployed" then aworkplace = aworkplace.name ~= "" and aworkplace.name or aworkplace.display_name end
 						  		print(string.format("Applicant %s is moving from %s to %s", IT(applicants[1].name), IT(aworkplace), displayEmployer.name))
 						  	end -- if lf_print
-						  	local avoid_workplace = applicants[1].avoid_workplace or ""
-						  	if avoid_workplace ~= employers[i] and applicants[1]:CanReachBuilding(employers[i]) then -- if they alowed to take the job, can walk or get a ride then move
+						  	
+						  	-- if applicant1 cant work here and reach building
+						  	if CAIcanWorkHere(applicants[1], employers[i]) and applicants[1]:CanReachBuilding(employers[i]) then -- if they alowed to take the job, can walk or get a ride then move
 						  	  local a_dome = applicants[1].dome or applicants[1].current_dome or applicants[1]:GetPos() -- current_dome is just in case the colonist is currently moving domes.
 						  	  local e_dome = employers[i].parent_dome or FindNearestObject(employers[i].city.labels.Dome, employers[i])
+						  	  
 						  	  ----- This section is for local domes in walking distance -----
 						  	  if a_dome == e_dome or IsInWalkingDist(a_dome, e_dome) then
 						  	  	-- if applicant can get to the job, then set it right away
 						  	  	if a_dome == e_dome then
 						  	  		-- if home dome
 						  	  		if lf_print then print(string.format("Applicant %s is staying in home dome %s", IT(applicants[1].name), IT(e_dome.name))) end
-						  	  	  if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
+						  	  	  if applicants[1].workplace and (applicants[1].workplace ~= employers[i]) then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
+						  	  	  table.remove(applicants, 1) -- remove the applicant from the applicant list
 						  	  	elseif ShouldMigrate() and a_dome.accept_colonists and e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) and CAIreserveResidence(applicants[1], e_dome) then
 						  	  		-- not home but but can migrate in walking distance 
 						  	  		if lf_print then print(string.format("Applicant %s is moving to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
-						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
+						  	  		if applicants[1].workplace and (applicants[1].workplace ~= employers[i]) then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	  		applicants[1]:SetForcedDome(e_dome)
+						  	  		table.remove(applicants, 1) -- remove the applicant from the applicant list
 						  	  	elseif e_dome:CanColonistsFromDifferentDomesWorkServiceTrainHere() and AreDomesConnected(a_dome, e_dome) and a_dome.accept_colonists and e_dome.accept_colonists and a_dome.allow_work_in_connected then
 						  	  		-- not home dome can commute to connected dome
 						  	  		if lf_print then print(string.format("Applicant %s is commuting from %s to dome %s", IT(applicants[1].name), IT(a_dome.name) , IT(e_dome.name))) end
-						  	  		if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
+						  	  		if applicants[1].workplace and (applicants[1].workplace ~= employers[i]) then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
+						  	  	  table.remove(applicants, 1) -- remove the applicant from the applicant list
 						  	    end -- if a_dome == e_dome
 						  	    ----- This section is if they can migrate with LRTransport and live in same dome -----
 						  	  elseif a_dome ~= e_dome and a_dome.accept_colonists and e_dome.accept_colonists and
@@ -329,9 +351,10 @@ function CAIjobhunt(jobtype)
 						  	  	-- obey dome filters
 						  	  	-- check for LR Transport availability and the workload
 						  	  	if lf_print then print(string.format("Applicant %s is relocating to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
-						  	  	if applicants[1].workplace then applicants[1]:GetFired() end -- if currently working then fire them.
+						  	  	if applicants[1].workplace and (applicants[1].workplace ~= employers[i]) then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	applicants[1]:SetWorkplace(employers[i], shift)
 						  	  	applicants[1]:SetForcedDome(e_dome)
+						  	  	table.remove(applicants, 1) -- remove the applicant from the applicant list
 						  	  	----- This section is if they can migrate with LRTransport and live in connected dome -----
 						  	  elseif a_dome ~= e_dome and a_dome.accept_colonists and e_dome.accept_colonists and
 						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and ShuttleLoadOK(e_dome.city) and
@@ -339,12 +362,14 @@ function CAIjobhunt(jobtype)
 						  	         	-- check conected domes if can move there and return the largest spaced one
 						  	         	local hasSpace, targetDome = CAIcanReserveResInConnnectedDome(applicants[1], e_dome)
 						  	         	if hasSpace and CAIreserveResidence(applicants[1], targetDome) then
-						  	         		if lf_print then print("Test Connecting Dome migration Function operating") end
+						  	         		if lf_print then print(string.format("Applicant %s is relocating to connected dome %s", IT(applicants[1].name), IT(e_dome.name))) end
+						  	         		if applicants[1].workplace and (applicants[1].workplace ~= employers[i]) then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	        applicants[1]:SetWorkplace(employers[i], shift)
 						  	  	        applicants[1]:SetForcedDome(targetDome)
+						  	  	        table.remove(applicants, 1) -- remove the applicant from the applicant list
 						  	         	end -- if hasSpace
 						  	  end --  if a_dome == e_dome or IsInWalkingDist
-						  	  table.remove(applicants, 1)
+				  	  
 						  	else
 						  		if lf_print then print("Applicant cant reach prospective employer or was fired from this job") end
 						  		if #employers == 1 and #applicants > 1 then
@@ -352,20 +377,27 @@ function CAIjobhunt(jobtype)
 						  			table.remove(applicants, 1)
 						  		end -- if #employers == 1
 						  	end -- if applicants[1]:CanReachBuilding(employers[i])
+						  	
 						  else
 						  	if lf_print then print("No more applicants available for employer: ", IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name)) end
-						  end -- if #applicants > 0
-					  end -- for slot
-					end -- if numopenslots[shift] > 0
-				end -- for shift
-			end -- for i
+						  end -- if CAIcanWorkHere(applicants[1], employers[i])
+					
+					  end -- for slot = 1, numopenslots[shift] do
+					  
+					end -- if numopenslots[shift] > 0 and #applicants > 0
+					
+				end -- for shift = 1, 3 do
+				
+			end -- for i = 1, #employers do
+			
     else
     	if lf_print then
     		print("==========================================================")
     		print("No match for applicants and employers in:", speclist[spec])
     	end -- if lf_print
 		end -- applicant and employers
-	end -- for
+	
+	end -- spec = 1, #speclist do
 
 end -- CAIjobhunt()
 
