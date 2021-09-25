@@ -1,4 +1,35 @@
 # Changelog for Career A.I.
+## [v1.8.3] 09/24/21 4:24:15 PM
+#### Changed
+- function CAIcanWorkHere(colonist, workplace) and implemented it in JobHunt()
+
+#### Added
+- some more documentation
+- extra debug info for realms
+- local function CAIhasIncompatibleTraits(workplace, unit_traits) 
+- retestApplicants table and functions to try applicants on other employers in JobHunt()
+- an exclude for tourists in the gather function.
+- added a slotFilled check and replaced for loop with while do loop )part of retryApplicants function)
+- using ValidateBuildinig in certain locations as a just in case
+- function Colonist:CanReachBuilding(bld) - rewrite to add realms checking
+
+#### Removed
+- removed this, put back to the way it was: - table.remove(applicants, 1) to each positive hit in finding a job in jobhunt
+
+#### Fixed Issues
+- better -can work here checks- guarantee that we dont move colonists when they should not work there.
+- Optimization - retry all the applicants that would have fallen off the list and been tried in the next cycle
+- fixed CAIhasIncompatibleTraits name
+- fixed attempts to send colonists to other realms on jobhunt
+- fixed moving onto the next applicatant for the slot if previsou appliant could not fill it.
+
+#### Open Issues
+
+#### Deprecated
+
+#### Todo
+
+--------------------------------------------------------
 ## [v1.8.2] 09/24/21 3:36:59 AM
 
 #### Added
