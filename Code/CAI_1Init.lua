@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Sept 24th, 2021
+-- Updated Sept 25th, 2021
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -95,6 +95,7 @@ end -- CAIgatherOpenJobs()
 -- gather colonists with non-pecialities working in specialty jobs
 -- exclude colonists at school, sanatorium and university (shouldn't have specialists in university anyway)
 -- exclude children and seniors that cannot work
+-- exclude tourists, just in case
 -- jobtype   : string, optional - gather all the colonists for any jobtype using jobtype = "thejobtype"
 local function CAIgatherColonists(jobtype)
 	local colonists = UIColony.city_labels.labels.Colonist or empty_table
@@ -104,7 +105,7 @@ local function CAIgatherColonists(jobtype)
 		local c = colonists[i]
 		if ((jobtype and c.specialist and c.specialist == jobtype) or ((not jobtype) and c.specialist and c.specialist ~= "none")) and c:CanWork() and
 		   (not IsKindOfClasses(c.workplace, "School", "Sanatorium", "MartianUniversity")) and
-		   ((not c.workplace) or (c.workplace and c.workplace.specialist ~= c.specialist)) then
+		   ((not c.workplace) or (c.workplace and c.workplace.specialist ~= c.specialist)) and (not c.traits.Tourist) then
 			-- colonist is a specialist
 			-- colonist can work see Colonist:CanWork()
 			-- is not in a school, sanatorium or MU
@@ -143,11 +144,11 @@ end -- function CAIhasIncompatibleTraits()
 
 -- determine if colonist can work at a job with enforcement/traits
 -- logic based on ShouldProc from workplacec.lua
-function CAIcanWorkHere(colonist, workplace)
+local function CAIcanWorkHere(colonist, workplace)
   -- lets check out the building 
   if ValidateBuilding(workplace) and (colonist.avoid_workplace ~= workplace) and workplace.ui_working and (workplace.max_workers > 0) and
      (not workplace.specialist_enforce_mode or ((workplace.specialist or "none") == colonist.specialist)) and 
-     (not HasIncompatibleTraits(workplace, colonist.traits)) 
+     (not CAIhasIncompatibleTraits(workplace, colonist.traits)) 
   then return true end 
   return false
 end -- CAIcanWorkHere(colonist, workplace)
@@ -282,20 +283,27 @@ function CAIjobhunt(jobtype)
 	for spec = 1, #speclist do
 		local applicants = jobhunters[speclist[spec]]
 		local employers = openjobs.employers[speclist[spec]]
+		local retestApplicants = {}
 		if applicants and #applicants > 0 and employers and #employers > 0 then
 			if lf_print then
 				print("--------------------------------------------")
 				print("We have applicants and jobs to switch for job type: ", speclist[spec], " - #Applicants: ", #applicants, " #Employers: ", #employers)
 			end -- if lf_print
 			for i = 1, #employers do
-			  -- test applicants list against all an emloyer of that job type
-			  -- if employer is not a match then move applicant to retestApplicant table and try the next applicant
-			  -- remove applicant for the list of matched
-			  -- when switching employers to test, move the retestApplicants back and try next employer
+			  -- test applicants list against an employer of that job type
+			  -- if employer is not a match then move applicant to retestApplicants table and try the next applicant
+			  -- remove applicant for the list of matched done below
+			  -- when switching employers to test if no more applicants, move the retestApplicants back and try next employer
+			  if (#applicants < 1) and (#retestApplicants > 0) then
+			    if lf_print then print("** We have retest candidates: ", #retestApplicants) end
+			    applicants = retestApplicants -- move the retest applicants
+			    retestApplicants = {}  -- zero out the retest applicants
+			  end -- if (#applicants < 1)
 			  
 				local numopenslots = CAIgetFreeSlots(employers[i])
 				local displayEmployer = lf_print and {name = IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name), 
-							                                dome = IT(employers[i].parent_dome.name or FindNearestObject(employers[i].city.labels.Dome, employers[i]).name)} or empty_table
+							                                dome = IT((employers[i].parent_dome and employers[i].parent_dome.name) or FindNearestObject(employers[i].city.labels.Dome, employers[i])),
+							                                realm = employers[i]:GetMapID() or "N/A"} or empty_table
 				
 				for shift = 1, 3 do
 				  -- if there are open job slots in this shift and we got applicants
@@ -307,15 +315,17 @@ function CAIjobhunt(jobtype)
 						
 						-- fill each slot with an applicant if possible
 						for slot = 1, numopenslots[shift] do
-						  if #applicants > 0 then
+						  local slotFilled = false
+						  --if #applicants > 0 then
+						  while (not slotFilled) and (#applicants > 0) do
 						  	if lf_print then
 						  		local aworkplace = applicants[1].workplace or "Unemployed"
 						  		if aworkplace ~= "Unemployed" then aworkplace = aworkplace.name ~= "" and aworkplace.name or aworkplace.display_name end
 						  		print(string.format("Applicant %s is moving from %s to %s", IT(applicants[1].name), IT(aworkplace), displayEmployer.name))
 						  	end -- if lf_print
 						  	
-						  	-- if applicant1 cant work here and reach building
-						  	if CAIcanWorkHere(applicants[1], employers[i]) and applicants[1]:CanReachBuilding(employers[i]) then -- if they alowed to take the job, can walk or get a ride then move
+						  	-- if applicant1 can work here and reach building
+						  	if CAIcanWorkHere(applicants[1], employers[i]) and applicants[1]:CanReachBuilding(employers[i]) then -- if they allowed to take the job, can walk or get a ride then move
 						  	  local a_dome = applicants[1].dome or applicants[1].current_dome or applicants[1]:GetPos() -- current_dome is just in case the colonist is currently moving domes.
 						  	  local e_dome = employers[i].parent_dome or FindNearestObject(employers[i].city.labels.Dome, employers[i])
 						  	  
@@ -327,20 +337,20 @@ function CAIjobhunt(jobtype)
 						  	  		if lf_print then print(string.format("Applicant %s is staying in home dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  	  if applicants[1].workplace and (applicants[1].workplace ~= employers[i]) then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
-						  	  	  table.remove(applicants, 1) -- remove the applicant from the applicant list
+						  	  	  slotFilled = true
 						  	  	elseif ShouldMigrate() and a_dome.accept_colonists and e_dome:GetFreeLivingSpace() > 0 and CAIcanMoveHere(applicants[1], employers[i]) and CAIreserveResidence(applicants[1], e_dome) then
 						  	  		-- not home but but can migrate in walking distance 
 						  	  		if lf_print then print(string.format("Applicant %s is moving to dome %s", IT(applicants[1].name), IT(e_dome.name))) end
 						  	  		if applicants[1].workplace and (applicants[1].workplace ~= employers[i]) then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
 						  	  		applicants[1]:SetForcedDome(e_dome)
-						  	  		table.remove(applicants, 1) -- remove the applicant from the applicant list
+						  	  		slotFilled = true
 						  	  	elseif e_dome:CanColonistsFromDifferentDomesWorkServiceTrainHere() and AreDomesConnected(a_dome, e_dome) and a_dome.accept_colonists and e_dome.accept_colonists and a_dome.allow_work_in_connected then
 						  	  		-- not home dome can commute to connected dome
 						  	  		if lf_print then print(string.format("Applicant %s is commuting from %s to dome %s", IT(applicants[1].name), IT(a_dome.name) , IT(e_dome.name))) end
 						  	  		if applicants[1].workplace and (applicants[1].workplace ~= employers[i]) then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	  applicants[1]:SetWorkplace(employers[i], shift) -- set their workpace
-						  	  	  table.remove(applicants, 1) -- remove the applicant from the applicant list
+						  	  	  slotFilled = true
 						  	    end -- if a_dome == e_dome
 						  	    ----- This section is if they can migrate with LRTransport and live in same dome -----
 						  	  elseif a_dome ~= e_dome and a_dome.accept_colonists and e_dome.accept_colonists and
@@ -354,7 +364,7 @@ function CAIjobhunt(jobtype)
 						  	  	if applicants[1].workplace and (applicants[1].workplace ~= employers[i]) then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	applicants[1]:SetWorkplace(employers[i], shift)
 						  	  	applicants[1]:SetForcedDome(e_dome)
-						  	  	table.remove(applicants, 1) -- remove the applicant from the applicant list
+						  	  	slotFilled = true
 						  	  	----- This section is if they can migrate with LRTransport and live in connected dome -----
 						  	  elseif a_dome ~= e_dome and a_dome.accept_colonists and e_dome.accept_colonists and
 						  	         IsTransportAvailableBetween(a_dome, e_dome) and IsLRTransportAvailable(e_dome.city) and ShuttleLoadOK(e_dome.city) and
@@ -366,30 +376,43 @@ function CAIjobhunt(jobtype)
 						  	         		if applicants[1].workplace and (applicants[1].workplace ~= employers[i]) then applicants[1]:GetFired() end -- if currently working then fire them.
 						  	  	        applicants[1]:SetWorkplace(employers[i], shift)
 						  	  	        applicants[1]:SetForcedDome(targetDome)
-						  	  	        table.remove(applicants, 1) -- remove the applicant from the applicant list
+						  	  	        slotFilled = true
 						  	         	end -- if hasSpace
 						  	  end --  if a_dome == e_dome or IsInWalkingDist
+						  	  
+						  	  -- whether the applicant failed or suceeded the secondary checks above, we have to move on, so 
+						  	  -- remove the applicant, do not try this applicant again for this employer
+						  	  table.remove(applicants, 1) -- remove the applicant from the applicant list
 				  	  
-						  	else
-						  		if lf_print then print("Applicant cant reach prospective employer or was fired from this job") end
-						  		if #employers == 1 and #applicants > 1 then
-						  			-- remove the applicant if we can try another applicant for this job and its the only job
-						  			table.remove(applicants, 1)
+						  	else -- cant work here
+						  		if lf_print then 
+						  		  print("Retry applicant - Applicant cant reach prospective employer, was not right for the job or was fired from this job")
+						  		  print(string.format("Applicant realm: %s - Employment realm: %s", applicants[1]:GetMapID(), displayEmployer.realm)) 
+						  		end -- if lf_print
+						  		if i < #employers then
+						  			-- remove the applicant but put him in the retry table to try another employer later since we have more to test
+						  			table.insert(retestApplicants, applicants[1])
+						  			table.remove(applicants, 1) -- remove the applicant from the applicant list
+						  		else
+						  		  -- this is our last employer ditch the applicant
+						  		  table.remove(applicants, 1) -- remove the applicant from the applicant list
 						  		end -- if #employers == 1
-						  	end -- if applicants[1]:CanReachBuilding(employers[i])
-						  	
-						  else
-						  	if lf_print then print("No more applicants available for employer: ", IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name)) end
-						  end -- if CAIcanWorkHere(applicants[1], employers[i])
+						  	end -- if CAIcanWorkHere(applicants[1], employers[i])
+
+						  end -- while (not slotFilled) and (#applcants > 0) do
 					
 					  end -- for slot = 1, numopenslots[shift] do
 					  
 					end -- if numopenslots[shift] > 0 and #applicants > 0
 					
 				end -- for shift = 1, 3 do
+				if lf_print then print("No more applicants available for employer: ", IT(employers[i].name ~= "" and employers[i].name or employers[i].display_name)) end
 				
 			end -- for i = 1, #employers do
-			
+    	if lf_print then
+    		print("==========================================================")
+    		print("=================== No More Employers ====================")
+    	end -- if lf_print			
     else
     	if lf_print then
     		print("==========================================================")
@@ -496,7 +519,7 @@ function ChooseWorkplace(unit, workplaces, allow_exchange)
   	-- we got no work so lets just ask anyway, but dont kick anyone out to prevent job hopping
   	best_bld, best_shift, best_to_kick, best_specialist_match = Old_ChooseWorkplace(unit, workplaces, false) -- use default and prevent job hopping.
     if lf_printDebug and ((not lf_watchSpec) or lf_watchSpec == specialist) then
-    	local best_bld_dome = best_bld and (best_bld.parent_dome or FindNearestObject(UIColony.city_labels.labels.Dome, best_bld))
+    	local best_bld_dome = ValidateBuilding(best_bld) and (best_bld.parent_dome or FindNearestObject(best_bld.city.labels.Dome, best_bld))
     	print("===========================================================")
     	print("------+++++= Default ChooseWorkplace in Effect =+++++------")
     	print("===========================================================")
@@ -557,7 +580,28 @@ end -- function end
 ---------------------------------------------- OnMsgs -----------------------------------------------
 
 function OnMsg.ClassesGenerate()
-  
+
+  -- re-write of CanReachBuilding(bld) in colonist.lua
+  -- they are not checking realms and they used communities for some reason instead of domes
+  Old_Colonist_CanReachBuilding = Colonist.CanReachBuilding
+  function Colonist:CanReachBuilding(bld)
+    if not g_CAIenabled then return Old_Colonist_CanReachBuilding(self) end -- shortcircuit
+    if not ValidateBuilding(bld) then return false end -- short circuit bad building
+    local my_dome = self.dome or empty_table
+    local my_realm = self:GetMapID() or my_dome:GetMapID() or ""
+    local dest_realm = bld:GetMapID() or ""
+    if my_realm ~= dest_realm then return false end -- short circuit not on same map
+    if my_dome ~= bld then
+      local dest_dome = bld.parent_dome or FindNearestObject(bld.city.labels.Dome, bld)
+      dest_dome = not dest_dome and FindNearestObject(self.city.labels.Dome, self) or dest_dome
+      if my_dome ~= dest_dome and not IsInWalkingDist(my_dome or self:GetNavigationPos(), dest_dome) and (not my_dome or not IsTransportAvailableBetween(my_dome, dest_dome)) then
+        return false
+      end -- if
+    end -- if my_dome ~= bld
+    return true
+  end -- Colonist:CanReachBuilding(bld)
+
+
   
   -- re-write from colonist.lua
   -- devs eliminated the jobbefore setting the avoid workplace - I just reversed the code.

@@ -1,8 +1,8 @@
 return PlaceObj('ModDef', {
 	'title', "Career A.I.",
-	'description', "Career A.I.\nv1.8.2 Sept 24th, 2021\nby SkiRich\nhttps://steamcommunity.com/sharedfiles/filedetails/?id=1606337956",
+	'description', "Career A.I.\nv1.8.3 Sept 25th, 2021\nby SkiRich\nhttps://steamcommunity.com/sharedfiles/filedetails/?id=1606337956",
 	'image', "CareerAILogo.png",
-	'last_changes', "v1.8.2 Sept 24th, 2021",
+	'last_changes', "v1.8.3 Sept 25th, 2021",
 	'ignore_files', {
 		"*.git/*",
 		"*.svn/*",
