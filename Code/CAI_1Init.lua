@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Sept 25th, 2021
+-- Updated Oct 4th, 2021
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -583,9 +583,9 @@ function OnMsg.ClassesGenerate()
 
   -- re-write of CanReachBuilding(bld) in colonist.lua
   -- they are not checking realms and they used communities for some reason instead of domes
-  Old_Colonist_CanReachBuilding = Colonist.CanReachBuilding
+  local Old_Colonist_CanReachBuilding = Colonist.CanReachBuilding
   function Colonist:CanReachBuilding(bld)
-    if not g_CAIenabled then return Old_Colonist_CanReachBuilding(self) end -- shortcircuit
+    if not g_CAIenabled then return Old_Colonist_CanReachBuilding(self, bld) end -- shortcircuit
     if not ValidateBuilding(bld) then return false end -- short circuit bad building
     local my_dome = self.dome or empty_table
     local my_realm = self:GetMapID() or my_dome:GetMapID() or ""
@@ -605,7 +605,7 @@ function OnMsg.ClassesGenerate()
   
   -- re-write from colonist.lua
   -- devs eliminated the jobbefore setting the avoid workplace - I just reversed the code.
-  Old_Colonist_GetFired = Colonist.GetFired
+  local Old_Colonist_GetFired = Colonist.GetFired
   function Colonist:GetFired()
     if not g_CAIenabled then return Old_Colonist_GetFired(self) end -- shortcircuit
     if not self.workplace then
