@@ -1,4 +1,22 @@
 # Changelog for Career A.I.
+## [v1.8.4] 10/04/21 10:35:52 PM
+#### Changed
+- function Colonist:CanReachBuilding(bld) -  the shortcircuit was missing bld
+- made Old's local
+
+#### Added
+
+#### Removed
+
+#### Fixed Issues
+
+#### Open Issues
+
+#### Deprecated
+
+#### Todo
+
+--------------------------------------------------------
 ## [v1.8.3] 09/24/21 4:24:15 PM
 #### Changed
 - function CAIcanWorkHere(colonist, workplace) and implemented it in JobHunt()
