@@ -1,20 +1,17 @@
 # Changelog for Career A.I.
+## [v1.8.5] 10/10/21 9:44:54 PM
+#### Changed
+- references in FindNearestObject to use labels.Community instead or labels.Dome
+
+#### Fixed Issues
+- Micro G Habitat is not classified as a Dome and not in that label.
+
+--------------------------------------------------------
 ## [v1.8.4] 10/04/21 10:35:52 PM
 #### Changed
 - function Colonist:CanReachBuilding(bld) -  the shortcircuit was missing bld
 - made Old's local
 
-#### Added
-
-#### Removed
-
-#### Fixed Issues
-
-#### Open Issues
-
-#### Deprecated
-
-#### Todo
 
 --------------------------------------------------------
 ## [v1.8.3] 09/24/21 4:24:15 PM
