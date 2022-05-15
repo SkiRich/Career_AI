@@ -1,4 +1,18 @@
 # Changelog for Career A.I.
+## [v1.8.6] 05/15/22 3:20:18 PM
+
+#### Added
+- Added DLC check for prunaria for local GetTransportRoute with foo backup
+- Re-write for function Workplace:CheckServicedDome(test_dome)
+- Re-write for function AreDomesConnected(bld1, bld2)
+
+
+#### Fixed Issues
+- LukeH's CCP for trains introduced a flaw in the CheckServicedDome.  Needed nil checks
+- AreDomesConnected needed nil checks since Colonist:UpdateWorkplace() balks at a nil when calling CheckServicedDome()
+
+
+--------------------------------------------------------
 ## [v1.8.5] 10/10/21 9:44:54 PM
 #### Changed
 - references in FindNearestObject to use labels.Community instead or labels.Dome
