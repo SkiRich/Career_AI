@@ -36,6 +36,7 @@ g_CAInoticeDismissTime = 15000  -- var to time the notification dismissal 15 sec
 
 local IT = _InternalTranslate
 
+
 -- idea from ShouldProc from workplace.lua
 -- added biome check for turned of domes
 local function CAIvalidateBld(bld)
@@ -577,6 +578,14 @@ function CAIincompatibeModCheck()
   end -- if foundIncompatibleMods
 end -- function end
 
+
+-- fake function for DLC check
+local function foo_function()
+end -- foo_function()
+
+-- Just in case they didnt buy LukeH's content pack
+local GetTransportRoute = GetTransportRoute or foo_function
+
 ---------------------------------------------- OnMsgs -----------------------------------------------
 
 function OnMsg.ClassesGenerate()
@@ -617,7 +626,41 @@ function OnMsg.ClassesGenerate()
     self:ChangeWorkplacePerformance()
   end -- function Colonist:GetFired()
   
+  -- re-write due to LukeH's Train Content Pack code does a re-write of the original but is missing a nil check.
+  -- I re-introduce the original here.
+  -- So I added in LukeH's code with fixes and a test above for the DLC
+  local Old_Workplace_CheckServicedDome = Workplace.CheckServicedDome
+  function Workplace:CheckServicedDome(test_dome)
+    if not g_CAIenabled then return Old_Workplace_CheckServicedDome(test_dome) end -- short circuit
+    
+    if test_dome and ((self.parent_dome == test_dome) or GetTransportRoute(test_dome, self)) then
+      return test_dome
+    end  -- if test_dome
+    
+    local dome = self.parent_dome
+    if dome then
+      return dome
+    end
+    if test_dome and test_dome:IsBuildingInWorkRange(self) then
+      return test_dome
+    end
+    return FindNearestObject(self.city.labels.Dome, self)
+  end -- Workplace:CheckServicedDome(test_dome)
+  
+  
+  -- fix for building validity check
+  -- rewrite from Domes.lua
+  -- problem is in Colonist:UpdateWorkplace() if CheckServicedDome returns a nil
+  local Old_AreDomesConnected = AreDomesConnected
+  function AreDomesConnected(bld1, bld2)
+    if not g_CAIenabled then return Old_AreDomesConnected(bld1, bld2) end -- short circuit
+    
+    if (not bld1) or (not bld2) then return false end -- nil check
+    return bld1 == bld2 or GetOpenAirBuildings(bld1:GetMapID()) and bld1:GetDomesInRange()[bld2] or bld1.connected_domes[bld2] or false
+  end -- AreDomesConnected(bld1, bld2)
+  
 end -- OnMsg.ClassesGenerate()
+--------------------------------------------------------------------------------------------------------------------------------------
 
 
 function OnMsg.NewHour(hour)
