@@ -584,7 +584,7 @@ local function foo_function()
 end -- foo_function()
 
 -- Just in case they didnt buy LukeH's content pack
-local GetTransportRoute = GetTransportRoute or foo_function
+local GetTransportRoute = rawget(_G, "GetTransportRoute") or foo_function -- use rawget to suppress the error missing global log spam
 
 ---------------------------------------------- OnMsgs -----------------------------------------------
 
@@ -633,17 +633,16 @@ function OnMsg.ClassesGenerate()
   function Workplace:CheckServicedDome(test_dome)
     if not g_CAIenabled then return Old_Workplace_CheckServicedDome(test_dome) end -- short circuit
     
-    if test_dome and ((self.parent_dome == test_dome) or GetTransportRoute(test_dome, self)) then
+    local dome = self.parent_dome -- no empty_table check needed, default is explicit false
+    
+    if test_dome and ((dome == test_dome) or test_dome:IsBuildingInWorkRange(self) or GetTransportRoute(test_dome, self)) then
       return test_dome
     end  -- if test_dome
-    
-    local dome = self.parent_dome
+
     if dome then
       return dome
-    end
-    if test_dome and test_dome:IsBuildingInWorkRange(self) then
-      return test_dome
-    end
+    end -- if dome
+
     return FindNearestObject(self.city.labels.Dome, self)
   end -- Workplace:CheckServicedDome(test_dome)
   
