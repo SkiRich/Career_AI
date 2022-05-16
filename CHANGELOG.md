@@ -1,4 +1,13 @@
 # Changelog for Career A.I.
+## [v1.8.7] 05/16/22 3:01:50 PM
+#### Changed
+- Workplace:CheckServicedDome(test_dome) - Optimizations
+- local GetTransportRoute
+
+#### Fixed Issues
+- Used rawget to prevent log spam when testing for available function
+
+--------------------------------------------------------
 ## [v1.8.6] 05/15/22 3:20:18 PM
 
 #### Added
