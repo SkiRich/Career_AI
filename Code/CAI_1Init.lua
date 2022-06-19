@@ -3,7 +3,7 @@
 -- All rights reserved, duplication and modification prohibited.
 -- You may not copy it, package it, or claim it as your own.
 -- Created Dec 24th, 2018
--- Updated Oct 10th, 2021
+-- Updated June 19th, 2022
 
 
 local lf_print      = false -- Setup debug printing in local file
@@ -600,6 +600,12 @@ function OnMsg.ClassesGenerate()
     local my_realm = self:GetMapID() or my_dome:GetMapID() or ""
     local dest_realm = bld:GetMapID() or ""
     if my_realm ~= dest_realm then return false end -- short circuit not on same map
+    
+    -- added for compatibility for trains.  Otherwise colonists will not commute.
+    if GetTransportRoute(self.dome or IsUnitInDome(self) or self, bld) then
+      return true
+    end -- if GetTransportRoute 
+    
     if my_dome ~= bld then
       local dest_dome = bld.parent_dome or FindNearestObject(bld.city.labels.Community, bld)
       dest_dome = not dest_dome and FindNearestObject(self.city.labels.Community, self) or dest_dome
@@ -631,7 +637,7 @@ function OnMsg.ClassesGenerate()
   -- So I added in LukeH's code with fixes and a test above for the DLC
   local Old_Workplace_CheckServicedDome = Workplace.CheckServicedDome
   function Workplace:CheckServicedDome(test_dome)
-    if not g_CAIenabled then return Old_Workplace_CheckServicedDome(test_dome) end -- short circuit
+    if not g_CAIenabled then return Old_Workplace_CheckServicedDome(self, test_dome) end -- short circuit
     
     local dome = self.parent_dome -- no empty_table check needed, default is explicit false
     
