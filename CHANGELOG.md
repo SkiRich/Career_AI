@@ -1,4 +1,15 @@
 # Changelog for Career A.I.
+## [vvvvvvv] 06/19/22 1:53:11 AM
+#### Changed
+- Colonist:CanReachBuilding(bld) - trains compatibility
+- Workplace:CheckServicedDome(test_dome) - syntax
+
+#### Fixed Issues
+- colonists refused to comute to work by train
+- minor syntax issue
+
+
+--------------------------------------------------------
 ## [v1.8.7] 05/16/22 3:01:50 PM
 #### Changed
 - Workplace:CheckServicedDome(test_dome) - Optimizations
